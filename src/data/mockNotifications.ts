@@ -1,0 +1,58 @@
+import type { AppNotification } from '../types'
+
+export const notifications: AppNotification[] = [
+  {
+    id: 'n1',
+    workspaceId: 'ws-studio',
+    title: 'Нужна проверка',
+    body: 'София просит посмотреть иерархию обзора.',
+    timestamp: '2026-11-02T14:20:00.000Z',
+    read: false,
+    href: '/tasks',
+  },
+  {
+    id: 'n2',
+    workspaceId: 'ws-studio',
+    title: 'Срок завтра',
+    body: 'Промпт декомпозиции задач нужно сдать 3 ноября.',
+    timestamp: '2026-11-02T09:00:00.000Z',
+    read: false,
+    href: '/tasks',
+  },
+  {
+    id: 'n3',
+    workspaceId: 'ws-studio',
+    title: 'Medialog отстаёт',
+    body: 'Майя отметила платформу Medialog AI как рискованную.',
+    timestamp: '2026-11-01T15:00:00.000Z',
+    read: true,
+    href: '/projects',
+  },
+  {
+    id: 'n4',
+    workspaceId: 'ws-studio',
+    title: 'Новый комментарий',
+    body: 'Нина прокомментировала контракт API задач.',
+    timestamp: '2026-11-01T10:16:00.000Z',
+    read: true,
+    href: '/tasks',
+  },
+  {
+    id: 'n5',
+    workspaceId: 'ws-north',
+    title: 'Заметки к отчёту',
+    body: 'Оуэн поделился заметками к отчёту для стейкхолдеров.',
+    timestamp: '2026-11-02T12:32:00.000Z',
+    read: false,
+    href: '/tasks',
+  },
+  {
+    id: 'n6',
+    workspaceId: 'ws-north',
+    title: 'Схема перенесена',
+    body: 'Маркус вернул проверку схемы хранилища в «К выполнению».',
+    timestamp: '2026-11-01T15:12:00.000Z',
+    read: true,
+    href: '/tasks',
+  },
+]
