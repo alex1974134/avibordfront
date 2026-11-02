@@ -1,8 +1,9 @@
 import { useEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, LogOut } from 'lucide-react'
 import { useWorkspaceData } from '../../hooks/useWorkspaceData'
 import { useAppStore } from '../../store/useAppStore'
+import { useAuthStore } from '../../store/useAuthStore'
 import { cn } from '../../utils/cn'
 import { Avatar } from '../ui/Avatar'
 import { aiNav, mainNav, systemNav, type NavItem } from './navigation'
@@ -39,6 +40,7 @@ export function Sidebar() {
   const setSidebarOpen = useAppStore((state) => state.setSidebarOpen)
   const location = useLocation()
   const { currentUser } = useWorkspaceData()
+  const logout = useAuthStore((state) => state.logout)
 
   useEffect(() => {
     setSidebarOpen(false)
@@ -99,6 +101,14 @@ export function Sidebar() {
             </span>
             <ChevronRight className="h-4 w-4 shrink-0 text-faint" aria-hidden="true" />
           </NavLink>
+          <button
+            type="button"
+            className="mt-1 flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2 py-2 text-sm text-muted transition-colors hover:bg-zinc-50 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
+            onClick={logout}
+          >
+            <LogOut className="h-4 w-4 shrink-0" />
+            Выйти
+          </button>
         </div>
       </aside>
     </>

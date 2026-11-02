@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { AppLayout } from '../components/layout/AppLayout'
+import { AuthPage } from '../pages/Auth/AuthPage'
 import { AIPage } from '../pages/AI/AIPage'
 import { TaskGeneratorPage } from '../pages/AI/TaskGeneratorPage'
 import { DashboardPage } from '../pages/Dashboard/DashboardPage'
@@ -9,11 +10,32 @@ import { ProjectsPage } from '../pages/Projects/ProjectsPage'
 import { SettingsPage } from '../pages/Settings/SettingsPage'
 import { TasksPage } from '../pages/Tasks/TasksPage'
 import { TeamPage } from '../pages/Team/TeamPage'
+import { GuestOnly, RequireAuth } from './guards'
 
 export const router = createBrowserRouter([
   {
+    path: '/login',
+    element: (
+      <GuestOnly>
+        <AuthPage />
+      </GuestOnly>
+    ),
+  },
+  {
+    path: '/register',
+    element: (
+      <GuestOnly>
+        <AuthPage />
+      </GuestOnly>
+    ),
+  },
+  {
     path: '/',
-    element: <AppLayout />,
+    element: (
+      <RequireAuth>
+        <AppLayout />
+      </RequireAuth>
+    ),
     children: [
       { index: true, element: <Navigate to="/dashboard" replace /> },
       { path: 'dashboard', element: <DashboardPage /> },

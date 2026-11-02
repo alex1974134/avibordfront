@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useWorkspaceData } from '../../hooks/useWorkspaceData'
 import { useAppStore } from '../../store/useAppStore'
+import { useAuthStore } from '../../store/useAuthStore'
 import type { PreferenceKey } from '../../types'
 import { plural } from '../../utils/format'
 import { Button } from '../../components/ui/Button'
@@ -21,6 +22,7 @@ export function SettingsPage() {
   const updateCurrentUser = useAppStore((state) => state.updateCurrentUser)
   const preferences = useAppStore((state) => state.preferences)
   const togglePreference = useAppStore((state) => state.togglePreference)
+  const logout = useAuthStore((state) => state.logout)
   const [name, setName] = useState(currentUser.name)
   const [role, setRole] = useState(currentUser.role)
   const [email, setEmail] = useState(currentUser.email)
@@ -115,6 +117,15 @@ export function SettingsPage() {
           <Card>
             <h2 className="text-sm font-semibold text-ink">Оформление</h2>
             <p className="mt-2 text-sm leading-6 text-muted">В этом прототипе по умолчанию светлая тема.</p>
+          </Card>
+          <Card>
+            <h2 className="text-sm font-semibold text-ink">Сессия</h2>
+            <p className="mt-2 text-sm leading-6 text-muted">Вы вошли как {currentUser.email}.</p>
+            <div className="mt-4">
+              <Button variant="secondary" onClick={logout}>
+                Выйти
+              </Button>
+            </div>
           </Card>
         </div>
       </div>
