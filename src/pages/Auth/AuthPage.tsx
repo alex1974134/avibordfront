@@ -5,7 +5,7 @@ import { returnPath } from '../../utils/returnPath'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { Field, Input } from '../../components/ui/Input'
-import { DEMO_PASSWORD, useAuthStore } from '../../store/useAuthStore'
+import { useAuthStore } from '../../store/useAuthStore'
 import { cn } from '../../utils/cn'
 
 type Mode = 'login' | 'register'
@@ -81,6 +81,8 @@ export function AuthPage() {
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [errors, setErrors] = useState<Partial<Record<FieldName, string>>>({})
+  const [notice, setNotice] = useState('')
+  const [pending, setPending] = useState(false)
 
   useEffect(() => {
     document.title = mode === 'register' ? 'Регистрация · AivibeBoard' : 'Вход · AivibeBoard'
@@ -89,6 +91,7 @@ export function AuthPage() {
   const switchMode = (next: Mode) => {
     if (next === mode) return
     setErrors({})
+    setNotice('')
     setPassword('')
     setConfirm('')
     navigate(next === 'register' ? '/register' : '/login', {
@@ -97,8 +100,9 @@ export function AuthPage() {
     })
   }
 
-  const submit = (event: FormEvent<HTMLFormElement>) => {
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (pending) return
     const nextErrors: Partial<Record<FieldName, string>> = {}
     const nextEmail = email.trim()
 
@@ -114,18 +118,30 @@ export function AuthPage() {
     }
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors)
+      setNotice('')
       return
     }
 
-    const message =
-      mode === 'login'
-        ? login(nextEmail, password)
-        : register({ name: name.trim(), email: nextEmail, password })
-    if (message) {
-      setErrors({ email: message })
-      return
+    setPending(true)
+    setErrors({})
+    setNotice('')
+    try {
+      const result =
+        mode === 'login'
+          ? await login(nextEmail, password)
+          : await register({ name: name.trim(), email: nextEmail, password })
+      if (result?.confirm) {
+        setNotice(result.message)
+        return
+      }
+      if (result) {
+        setErrors({ email: result.message })
+        return
+      }
+      navigate(returnPath(location.state), { replace: true })
+    } finally {
+      setPending(false)
     }
-    navigate(returnPath(location.state), { replace: true })
   }
 
   return (
@@ -197,16 +213,12 @@ export function AuthPage() {
                 onChange={setConfirm}
               />
             ) : null}
-            <Button type="submit" className="mt-1 w-full">
-              {mode === 'login' ? 'Войти' : 'Создать аккаунт'}
+            {notice ? <p className="text-sm leading-5 text-accent">{notice}</p> : null}
+            <Button type="submit" className="mt-1 w-full" disabled={pending}>
+              {pending ? 'Подождите…' : mode === 'login' ? 'Войти' : 'Создать аккаунт'}
             </Button>
           </form>
         </Card>
-        {mode === 'login' ? (
-          <p className="mt-4 text-center text-xs leading-5 text-faint">
-            Для демо-участников пароль {DEMO_PASSWORD}. Например, alex@aivibe.io
-          </p>
-        ) : null}
       </div>
     </div>
   )
