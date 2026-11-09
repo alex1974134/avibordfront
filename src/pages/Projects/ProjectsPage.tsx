@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useWorkspaceData } from '../../hooks/useWorkspaceData'
 import type { ProjectStatus } from '../../types'
-import { projectStatusLabel, projectStatuses } from '../../utils/labels'
+import { useI18n } from '../../i18n/useI18n'
+import { projectStatusText, projectStatuses } from '../../utils/labels'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { FilterChips } from '../../components/ui/FilterChips'
 import { Page, PageIntro } from '../../components/ui/PageIntro'
@@ -10,27 +11,28 @@ import { ProjectCard } from '../../features/dashboard/ProjectCard'
 export function ProjectsPage() {
   const { projects, members, searchQuery } = useWorkspaceData()
   const [status, setStatus] = useState<'all' | ProjectStatus>('all')
+  const { locale, t } = useI18n()
   const visible = status === 'all' ? projects : projects.filter((project) => project.status === status)
 
   return (
     <Page>
       <PageIntro
-        title="Проекты"
-        description="Текущие инициативы, их темп и кто их ведёт."
+        title={t('projects')}
+        description={t('projectsIntro')}
       />
       <FilterChips
-        label="Статус проекта"
+        label={t('filterProjectStatus')}
         value={status}
         onChange={setStatus}
         options={[
-          { value: 'all', label: 'Все' },
-          ...projectStatuses.map((item) => ({ value: item, label: projectStatusLabel[item] })),
+          { value: 'all', label: t('all') },
+          ...projectStatuses.map((item) => ({ value: item, label: projectStatusText(item, locale) })),
         ]}
       />
       {visible.length === 0 ? (
         <EmptyState
-          title="В этом виде проектов нет"
-          description={searchQuery ? 'Ничего не совпало с поиском.' : 'Сейчас проектов с таким статусом нет.'}
+          title={t('noProjects')}
+          description={searchQuery ? t('noProjectsQuery') : t('noProjectsStatus')}
         />
       ) : (
         <div className="grid gap-3 md:grid-cols-2">

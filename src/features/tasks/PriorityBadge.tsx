@@ -1,5 +1,6 @@
 import type { TaskPriority } from '../../types'
-import { priorityLabel } from '../../utils/labels'
+import { useI18n } from '../../i18n/useI18n'
+import { priorityText } from '../../utils/labels'
 import { Badge, type BadgeTone } from '../../components/ui/Badge'
 
 const tones: Record<TaskPriority, BadgeTone> = {
@@ -17,5 +18,6 @@ export const priorityDot: Record<TaskPriority, string> = {
 }
 
 export function PriorityBadge({ priority }: { priority: TaskPriority }) {
-  return <Badge tone={tones[priority]}>{priorityLabel[priority]}</Badge>
+  const { locale } = useI18n()
+  return <Badge tone={tones[priority]}>{priorityText(priority, locale)}</Badge>
 }

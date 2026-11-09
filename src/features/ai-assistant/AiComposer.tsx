@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { LoaderCircle, Sparkles } from 'lucide-react'
 import { useWorkspaceData } from '../../hooks/useWorkspaceData'
+import { useI18n } from '../../i18n/useI18n'
 import { useAppStore } from '../../store/useAppStore'
 import { draftPlan } from '../../utils/decompose'
 import { Button } from '../../components/ui/Button'
@@ -10,12 +11,13 @@ import { AiHistory } from './AiHistory'
 import { AiResult } from './AiResult'
 
 const steps = [
-  { title: 'Опишите результат', body: 'Напишите, чего хотите добиться, а не шаблон тикета.' },
-  { title: 'Проверьте черновик', body: 'Исполнители, приоритет и оценки — это предложения.' },
-  { title: 'Добавьте в проект', body: 'Принятые задачи попадут в «Мои задачи» со статусом «К выполнению».' },
-]
+  { title: 'aiStep1Title', body: 'aiStep1Body' },
+  { title: 'aiStep2Title', body: 'aiStep2Body' },
+  { title: 'aiStep3Title', body: 'aiStep3Body' },
+] as const
 
 export function AiComposer({ layout }: { layout: 'card' | 'assistant' | 'generator' }) {
+  const { locale, t } = useI18n()
   const { members, allProjects, workspace } = useWorkspaceData()
   const aiDraft = useAppStore((state) => state.aiDraft)
   const setAiDraft = useAppStore((state) => state.setAiDraft)
@@ -48,13 +50,13 @@ export function AiComposer({ layout }: { layout: 'card' | 'assistant' | 'generat
   const generate = () => {
     const prompt = aiDraft.trim()
     if (!prompt) {
-      setError('Опишите, чего хотите добиться.')
+      setError(t('aiNeedGoal'))
       return
     }
     setError('')
     setLoading(true)
     window.setTimeout(() => {
-      const plan = draftPlan(prompt, members.map((member) => member.id))
+      const plan = draftPlan(prompt, members.map((member) => member.id), locale)
       addAiTurn({
         id: crypto.randomUUID(),
         prompt,
@@ -76,30 +78,28 @@ export function AiComposer({ layout }: { layout: 'card' | 'assistant' | 'generat
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-soft">
             <Sparkles className="h-4 w-4" />
           </span>
-          <span className="text-xs font-medium">AI-помощник</span>
+          <span className="text-xs font-medium">{t('navAi')}</span>
         </div>
         {layout === 'card' ? (
           <Link to="/ai" className="text-xs font-medium text-muted hover:text-ink">
-            Открыть
+            {t('aiOpen')}
           </Link>
         ) : null}
       </div>
       {layout === 'card' ? (
         <>
-          <h2 className="mt-3 text-base font-semibold tracking-tight text-ink">Пусть AI разложит работу</h2>
-          <p className="mt-1 text-sm leading-6 text-muted">
-            Превратите сложную идею в набор задач, назначьте ответственных и ускорьте работу.
-          </p>
+          <h2 className="mt-3 text-base font-semibold tracking-tight text-ink">{t('aiCardTitle')}</h2>
+          <p className="mt-1 text-sm leading-6 text-muted">{t('aiCardBody')}</p>
         </>
       ) : null}
       <div className="mt-4">
         <label className="sr-only" htmlFor="ai-goal">
-          Опишите, чего хотите добиться
+          {t('aiGoal')}
         </label>
         <Textarea
           id="ai-goal"
           value={aiDraft}
-          placeholder="Опишите, чего хотите добиться..."
+          placeholder={t('aiGoalPlaceholder')}
           onChange={(event) => {
             setAiDraft(event.target.value)
             if (error) setError('')
@@ -108,9 +108,9 @@ export function AiComposer({ layout }: { layout: 'card' | 'assistant' | 'generat
         {error ? <p className="mt-1.5 text-xs text-rose-600">{error}</p> : null}
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <Button onClick={generate} disabled={loading} icon={loading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}>
-            {loading ? 'Собираем…' : 'Сгенерировать задачи'}
+            {loading ? t('aiGathering') : t('aiGenerate')}
           </Button>
-          <p className="text-xs text-faint">Черновик по вашему тексту. Внешняя модель не вызывается.</p>
+          <p className="text-xs text-faint">{t('aiLocalNote')}</p>
         </div>
       </div>
       {active ? (
@@ -148,7 +148,7 @@ export function AiComposer({ layout }: { layout: 'card' | 'assistant' | 'generat
         />
       ) : (
         <div className="rounded-xl border border-line bg-white p-4 shadow-[0_1px_2px_rgb(22_24_29/0.04)]">
-          <h2 className="text-sm font-semibold text-ink">Как собирается черновик</h2>
+          <h2 className="text-sm font-semibold text-ink">{t('aiHow')}</h2>
           <ol className="mt-3 flex flex-col gap-3">
             {steps.map((step, index) => (
               <li key={step.title} className="flex gap-3">
@@ -156,8 +156,8 @@ export function AiComposer({ layout }: { layout: 'card' | 'assistant' | 'generat
                   {index + 1}
                 </span>
                 <span>
-                  <span className="block text-sm font-medium text-ink">{step.title}</span>
-                  <span className="mt-0.5 block text-xs leading-5 text-muted">{step.body}</span>
+                  <span className="block text-sm font-medium text-ink">{t(step.title)}</span>
+                  <span className="mt-0.5 block text-xs leading-5 text-muted">{t(step.body)}</span>
                 </span>
               </li>
             ))}

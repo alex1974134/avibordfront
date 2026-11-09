@@ -1,37 +1,57 @@
 import type { Activity, User } from '../../types'
+import { localized } from '../../i18n/content'
+import { useI18n } from '../../i18n/useI18n'
 import { formatRelative } from '../../utils/format'
+import { statusFromMeta } from '../../utils/labels'
 import { Avatar } from '../../components/ui/Avatar'
 import { Card } from '../../components/ui/Card'
 
 function ActivityCopy({ activity }: { activity: Activity }) {
-  const target = <span className="font-medium text-ink">{activity.target}</span>
+  const { locale, t } = useI18n()
+  const targetText = localized(locale, `activity.${activity.id}.target`, activity.target)
+  const target = <span className="font-medium text-ink">{targetText}</span>
+  const meta = statusFromMeta(activity.meta, locale)
+  const metaText = localized(locale, `activity.${activity.id}.meta`, meta)
   switch (activity.type) {
     case 'task_created':
-      return <>создал(а) {target}</>
+      return (
+        <>
+          {t('actCreated')} {target}
+        </>
+      )
     case 'task_completed':
-      return <>завершил(а) {target}</>
+      return (
+        <>
+          {t('actCompleted')} {target}
+        </>
+      )
     case 'status_changed':
       return (
         <>
-          перевёл(а) {target} в {activity.meta}
+          {t('actMoved')} {target} {t('actMovedTo')} {metaText}
         </>
       )
     case 'member_added':
       return (
         <>
-          добавил(а) <span className="font-medium text-ink">{activity.meta}</span> в {target}
+          {t('actAdded')} <span className="font-medium text-ink">{activity.meta}</span> {t('actAddedTo')} {target}
         </>
       )
     case 'comment':
-      return <>прокомментировал(а) {target}</>
+      return (
+        <>
+          {t('actCommented')} {target}
+        </>
+      )
   }
 }
 
 export function ActivityFeed({ activities, users }: { activities: Activity[]; users: User[] }) {
+  const { locale, t } = useI18n()
   return (
     <Card padding={false}>
       <div className="border-b border-line px-4 py-3">
-        <h2 className="text-sm font-semibold text-ink">Недавняя активность</h2>
+        <h2 className="text-sm font-semibold text-ink">{t('recentActivity')}</h2>
       </div>
       <ul className="divide-y divide-line px-4">
         {activities.map((activity) => {
@@ -44,10 +64,14 @@ export function ActivityFeed({ activities, users }: { activities: Activity[]; us
                 <p className="text-sm leading-5 text-muted">
                   <span className="font-medium text-ink">{user.name}</span> <ActivityCopy activity={activity} />
                 </p>
-                {activity.detail ? <p className="mt-1 text-xs leading-5 text-faint">{activity.detail}</p> : null}
+                {activity.detail ? (
+                  <p className="mt-1 text-xs leading-5 text-faint">
+                    {localized(locale, `activity.${activity.id}.detail`, activity.detail)}
+                  </p>
+                ) : null}
               </div>
               <time className="shrink-0 text-xs text-faint" dateTime={activity.timestamp}>
-                {formatRelative(activity.timestamp)}
+                {formatRelative(activity.timestamp, Date.now(), locale)}
               </time>
             </li>
           )

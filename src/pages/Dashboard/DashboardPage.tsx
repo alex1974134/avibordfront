@@ -6,6 +6,7 @@ import { ProjectOverview } from '../../features/dashboard/ProjectOverview'
 import { StatGrid } from '../../features/dashboard/StatGrid'
 import { useWorkspaceData } from '../../hooks/useWorkspaceData'
 import { useAppStore } from '../../store/useAppStore'
+import { useI18n } from '../../i18n/useI18n'
 import { firstName } from '../../utils/initials'
 import { Page } from '../../components/ui/PageIntro'
 import { Button } from '../../components/ui/Button'
@@ -14,6 +15,7 @@ export function DashboardPage() {
   const data = useWorkspaceData()
   const openTaskModal = useAppStore((state) => state.openTaskModal)
   const name = firstName(data.currentUser.name)
+  const { t } = useI18n()
 
   const askAi = () => {
     const field = document.getElementById('ai-goal')
@@ -25,15 +27,15 @@ export function DashboardPage() {
     <Page>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-[22px] font-semibold tracking-tight text-ink">Добрый день, {name} 👋</h1>
-          <p className="mt-1 text-sm text-muted">Вот что происходит в пространстве сегодня.</p>
+          <h1 className="text-[22px] font-semibold tracking-tight text-ink">{t('greeting', { name })}</h1>
+          <p className="mt-1 text-sm text-muted">{t('greetingSub')}</p>
         </div>
         <div className="flex gap-2">
           <Button variant="secondary" icon={<Plus className="h-4 w-4" />} onClick={openTaskModal}>
-            Новая задача
+            {t('newTask')}
           </Button>
           <Button icon={<Sparkles className="h-4 w-4" />} onClick={askAi}>
-            Спросить AI
+            {t('askAi')}
           </Button>
         </div>
       </div>

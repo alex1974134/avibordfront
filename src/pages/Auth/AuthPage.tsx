@@ -1,7 +1,9 @@
 import { useEffect, useId, useState, type FormEvent, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
+import { useI18n } from '../../i18n/useI18n'
 import { returnPath } from '../../utils/returnPath'
+import { LanguageSwitch } from '../../components/layout/LanguageSwitch'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { Field, Input } from '../../components/ui/Input'
@@ -39,6 +41,7 @@ function PasswordField({
   onChange: (value: string) => void
 }) {
   const [visible, setVisible] = useState(false)
+  const { t } = useI18n()
 
   return (
     <div className="flex flex-col gap-1.5 text-sm">
@@ -56,7 +59,7 @@ function PasswordField({
         />
         <button
           type="button"
-          aria-label={visible ? 'Скрыть пароль' : 'Показать пароль'}
+          aria-label={visible ? t('authHidePassword') : t('authShowPassword')}
           className="absolute top-0.5 right-0.5 inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-faint transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
           onClick={() => setVisible((current) => !current)}
         >
@@ -83,10 +86,11 @@ export function AuthPage() {
   const [errors, setErrors] = useState<Partial<Record<FieldName, string>>>({})
   const [notice, setNotice] = useState('')
   const [pending, setPending] = useState(false)
+  const { t } = useI18n()
 
   useEffect(() => {
-    document.title = mode === 'register' ? 'Регистрация · AivibeBoard' : 'Вход · AivibeBoard'
-  }, [mode])
+    document.title = `${mode === 'register' ? t('authRegister') : t('authLogin')} · AivibeBoard`
+  }, [mode, t])
 
   const switchMode = (next: Mode) => {
     if (next === mode) return
@@ -106,15 +110,15 @@ export function AuthPage() {
     const nextErrors: Partial<Record<FieldName, string>> = {}
     const nextEmail = email.trim()
 
-    if (mode === 'register' && !name.trim()) nextErrors.name = 'Имя обязательно.'
-    if (!nextEmail) nextErrors.email = 'Введите почту.'
-    else if (!emailPattern.test(nextEmail)) nextErrors.email = 'Введите корректную почту.'
-    if (!password) nextErrors.password = 'Введите пароль.'
+    if (mode === 'register' && !name.trim()) nextErrors.name = t('nameRequired')
+    if (!nextEmail) nextErrors.email = t('authEnterEmail')
+    else if (!emailPattern.test(nextEmail)) nextErrors.email = t('emailInvalid')
+    if (!password) nextErrors.password = t('authEnterPassword')
     else if (mode === 'register' && password.length < 6) {
-      nextErrors.password = 'Пароль должен быть не короче 6 символов.'
+      nextErrors.password = t('authPasswordShort')
     }
     if (mode === 'register' && !nextErrors.password && password !== confirm) {
-      nextErrors.confirm = 'Пароли не совпадают.'
+      nextErrors.confirm = t('authPasswordMismatch')
     }
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors)
@@ -145,7 +149,10 @@ export function AuthPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-canvas px-4 py-10">
+    <div className="relative flex min-h-screen items-center justify-center bg-canvas px-4 py-10">
+      <div className="absolute top-4 right-4">
+        <LanguageSwitch />
+      </div>
       <div className="w-full max-w-[420px]">
         <div className="mb-6 flex items-center gap-2.5">
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent text-sm font-semibold text-white">
@@ -153,29 +160,27 @@ export function AuthPage() {
           </span>
           <div>
             <p className="text-sm font-semibold tracking-tight text-ink">AivibeBoard</p>
-            <p className="text-[11px] text-faint">Рабочее пространство</p>
+            <p className="text-[11px] text-faint">{t('workspaceLabel')}</p>
           </div>
         </div>
         <Card className="p-6">
           <h1 className="text-lg font-semibold tracking-tight text-ink">
-            {mode === 'login' ? 'Вход' : 'Регистрация'}
+            {mode === 'login' ? t('authLogin') : t('authRegister')}
           </h1>
           <p className="mt-1 text-sm leading-6 text-muted">
-            {mode === 'login'
-              ? 'Введите почту и пароль, чтобы открыть доску.'
-              : 'Аккаунт сразу попадёт в пространство Aivibe Studio.'}
+            {mode === 'login' ? t('authLoginLead') : t('authRegisterLead')}
           </p>
           <div className="mt-5 grid grid-cols-2 rounded-lg bg-canvas p-1">
             <ModeButton active={mode === 'login'} onClick={() => switchMode('login')}>
-              Вход
+              {t('authLogin')}
             </ModeButton>
             <ModeButton active={mode === 'register'} onClick={() => switchMode('register')}>
-              Регистрация
+              {t('authRegister')}
             </ModeButton>
           </div>
           <form className="mt-5 flex flex-col gap-4" noValidate onSubmit={submit}>
             {mode === 'register' ? (
-              <Field label="Имя" error={errors.name}>
+              <Field label={t('name')} error={errors.name}>
                 <Input
                   id={`${formId}-name`}
                   autoComplete="name"
@@ -184,7 +189,7 @@ export function AuthPage() {
                 />
               </Field>
             ) : null}
-            <Field label="Почта" error={errors.email}>
+            <Field label={t('email')} error={errors.email}>
               <Input
                 id={`${formId}-email`}
                 type="email"
@@ -197,7 +202,7 @@ export function AuthPage() {
             </Field>
             <PasswordField
               id={`${formId}-password`}
-              label="Пароль"
+              label={t('authPassword')}
               autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
               value={password}
               error={errors.password}
@@ -206,7 +211,7 @@ export function AuthPage() {
             {mode === 'register' ? (
               <PasswordField
                 id={`${formId}-confirm`}
-                label="Повторите пароль"
+                label={t('authConfirm')}
                 autoComplete="new-password"
                 value={confirm}
                 error={errors.confirm}
@@ -215,7 +220,7 @@ export function AuthPage() {
             ) : null}
             {notice ? <p className="text-sm leading-5 text-accent">{notice}</p> : null}
             <Button type="submit" className="mt-1 w-full" disabled={pending}>
-              {pending ? 'Подождите…' : mode === 'login' ? 'Войти' : 'Создать аккаунт'}
+              {pending ? t('authWait') : mode === 'login' ? t('authSignIn') : t('authCreate')}
             </Button>
           </form>
         </Card>

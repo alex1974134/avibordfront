@@ -4,6 +4,8 @@ import { Bell } from 'lucide-react'
 import { useDismiss } from '../../hooks/useDismiss'
 import { useWorkspaceData } from '../../hooks/useWorkspaceData'
 import { useAppStore } from '../../store/useAppStore'
+import { localized } from '../../i18n/content'
+import { useI18n } from '../../i18n/useI18n'
 import { formatRelative } from '../../utils/format'
 import { IconButton } from '../ui/IconButton'
 
@@ -15,12 +17,13 @@ export function NotificationMenu() {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const unread = notifications.filter((item) => !item.read).length
+  const { locale, t } = useI18n()
 
   useDismiss(open, ref, () => setOpen(false))
 
   return (
     <div ref={ref} className="relative">
-      <IconButton label="Уведомления" onClick={() => setOpen((value) => !value)} aria-expanded={open}>
+      <IconButton label={t('notifications')} onClick={() => setOpen((value) => !value)} aria-expanded={open}>
         <Bell className="h-4 w-4" />
       </IconButton>
       {unread > 0 ? (
@@ -31,19 +34,19 @@ export function NotificationMenu() {
       {open ? (
         <div className="absolute top-[calc(100%+8px)] right-0 z-30 w-[min(22rem,calc(100vw-2rem))] rounded-xl border border-line bg-white shadow-lg">
           <div className="flex items-center justify-between gap-3 border-b border-line px-3 py-2.5">
-            <p className="text-sm font-medium text-ink">Уведомления</p>
+            <p className="text-sm font-medium text-ink">{t('notifications')}</p>
             {unread > 0 ? (
               <button
                 type="button"
                 onClick={markAllNotificationsRead}
                 className="cursor-pointer text-xs font-medium text-accent hover:text-accent-hover"
               >
-                Прочитать все
+                {t('markAllRead')}
               </button>
             ) : null}
           </div>
           {notifications.length === 0 ? (
-            <p className="px-3 py-8 text-center text-sm text-muted">Новых уведомлений нет.</p>
+            <p className="px-3 py-8 text-center text-sm text-muted">{t('noNotifications')}</p>
           ) : (
             <ul className="max-h-80 overflow-auto p-1.5">
               {notifications.map((item) => (
@@ -60,10 +63,10 @@ export function NotificationMenu() {
                     <span className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${item.read ? 'bg-transparent' : 'bg-accent'}`} />
                     <span className="min-w-0 flex-1">
                       <span className="flex items-baseline justify-between gap-3">
-                        <span className="truncate text-sm font-medium text-ink">{item.title}</span>
-                        <span className="shrink-0 text-[11px] text-faint">{formatRelative(item.timestamp)}</span>
+                        <span className="truncate text-sm font-medium text-ink">{localized(locale, `note.${item.id}.title`, item.title)}</span>
+                        <span className="shrink-0 text-[11px] text-faint">{formatRelative(item.timestamp, Date.now(), locale)}</span>
                       </span>
-                      <span className="mt-0.5 block text-xs leading-5 text-muted">{item.body}</span>
+                      <span className="mt-0.5 block text-xs leading-5 text-muted">{localized(locale, `note.${item.id}.body`, item.body)}</span>
                     </span>
                   </button>
                 </li>

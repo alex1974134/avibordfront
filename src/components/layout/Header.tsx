@@ -6,7 +6,9 @@ import { useAppStore } from '../../store/useAppStore'
 import { Avatar } from '../ui/Avatar'
 import { Button } from '../ui/Button'
 import { IconButton } from '../ui/IconButton'
-import { pageTitle } from './navigation'
+import { useI18n } from '../../i18n/useI18n'
+import { LanguageSwitch } from './LanguageSwitch'
+import { pageMeta } from './navigation'
 import { NotificationMenu } from './NotificationMenu'
 import { SearchField } from './SearchField'
 
@@ -16,12 +18,15 @@ export function Header() {
   const setSidebarOpen = useAppStore((state) => state.setSidebarOpen)
   const openTaskModal = useAppStore((state) => state.openTaskModal)
   const [searchOpen, setSearchOpen] = useState(false)
-  const meta = pageTitle(location.pathname, workspace.name)
+  const { t } = useI18n()
+  const meta = pageMeta(location.pathname)
+  const title = meta ? t(meta.titleKey) : 'AivibeBoard'
+  const crumbs = [meta?.ai ? 'AI' : workspace.name, title]
 
   useEffect(() => {
-    document.title = `${meta.title} · AivibeBoard`
+    document.title = `${title} · AivibeBoard`
     setSearchOpen(false)
-  }, [meta.title])
+  }, [title])
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -39,30 +44,31 @@ export function Header() {
   return (
     <header className="sticky top-0 z-20 border-b border-line bg-white/90 backdrop-blur">
       <div className="flex h-14 items-center gap-3 px-4 sm:px-6">
-        <IconButton className="lg:hidden" label="Открыть меню" onClick={() => setSidebarOpen(true)}>
+        <IconButton className="lg:hidden" label={t('openMenu')} onClick={() => setSidebarOpen(true)}>
           <PanelLeft className="h-4 w-4" />
         </IconButton>
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-ink">{meta.title}</p>
-          <p className="truncate text-xs text-faint">{meta.crumbs.join(' / ')}</p>
+          <p className="truncate text-sm font-medium text-ink">{title}</p>
+          <p className="truncate text-xs text-faint">{crumbs.join(' / ')}</p>
         </div>
         <div className="ml-auto hidden min-w-0 flex-1 md:block md:max-w-sm">
           <SearchField />
         </div>
         <div className="ml-auto flex items-center gap-1.5 md:ml-0">
-          <IconButton className="md:hidden" label="Поиск" onClick={() => setSearchOpen((value) => !value)}>
+          <LanguageSwitch />
+          <IconButton className="md:hidden" label={t('search')} onClick={() => setSearchOpen((value) => !value)}>
             <Search className="h-4 w-4" />
           </IconButton>
           <Button className="hidden sm:inline-flex" size="sm" icon={<Plus className="h-3.5 w-3.5" />} onClick={openTaskModal}>
-            Новая задача
+            {t('newTask')}
           </Button>
-          <IconButton className="sm:hidden" label="Новая задача" onClick={openTaskModal}>
+          <IconButton className="sm:hidden" label={t('newTask')} onClick={openTaskModal}>
             <Plus className="h-4 w-4" />
           </IconButton>
           <NotificationMenu />
           <Link
             to="/settings"
-            aria-label="Открыть профиль"
+            aria-label={t('openProfile')}
             className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
           >
             <Avatar user={currentUser} size="sm" />

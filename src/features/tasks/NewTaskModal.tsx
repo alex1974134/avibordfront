@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
+import { localized } from '../../i18n/content'
+import { useI18n } from '../../i18n/useI18n'
 import { useAppStore } from '../../store/useAppStore'
 import type { TaskPriority } from '../../types'
 import { plusDays } from '../../utils/format'
-import { priorities, priorityLabel } from '../../utils/labels'
+import { priorities, priorityText } from '../../utils/labels'
 import { Button } from '../../components/ui/Button'
 import { Field, Input, Select } from '../../components/ui/Input'
 import { Modal } from '../../components/ui/Modal'
@@ -15,6 +17,7 @@ export function NewTaskModal() {
   const currentUserId = useAppStore((state) => state.currentUserId)
   const projects = useAppStore((state) => state.projects)
   const users = useAppStore((state) => state.users)
+  const { locale, t } = useI18n()
 
   const workspaceProjects = useMemo(
     () => projects.filter((project) => project.workspaceId === workspaceId),
@@ -44,11 +47,11 @@ export function NewTaskModal() {
 
   const submit = () => {
     if (!title.trim()) {
-      setError('Добавьте название задачи.')
+      setError(t('taskTitleRequired'))
       return
     }
     if (!projectId || !assigneeId) {
-      setError('Выберите проект и исполнителя.')
+      setError(t('pickProjectAssignee'))
       return
     }
     addTask({
@@ -64,16 +67,16 @@ export function NewTaskModal() {
   return (
     <Modal
       open={open}
-      title="Новая задача"
-      description="Задача останется в этом демо-пространстве."
+      title={t('newTask')}
+      description={t('newTaskHint')}
       onClose={closeTaskModal}
       footer={
         <>
           <Button variant="secondary" onClick={closeTaskModal}>
-            Отмена
+            {t('cancel')}
           </Button>
           <Button type="submit" form="new-task-form">
-            Создать задачу
+            {t('createTask')}
           </Button>
         </>
       }
@@ -86,18 +89,18 @@ export function NewTaskModal() {
           submit()
         }}
       >
-        <Field label="Название" error={error}>
+        <Field label={t('taskTitle')} error={error}>
           <Input
             value={title}
             autoFocus
-            placeholder="Что нужно сделать?"
+            placeholder={t('taskTitlePlaceholder')}
             onChange={(event) => {
               setTitle(event.target.value)
               if (error) setError('')
             }}
           />
         </Field>
-        <Field label="Проект">
+        <Field label={t('project')}>
           <Select
             value={projectId}
             onChange={(event) => {
@@ -112,13 +115,13 @@ export function NewTaskModal() {
           >
             {workspaceProjects.map((item) => (
               <option key={item.id} value={item.id}>
-                {item.name}
+                {localized(locale, `project.${item.id}.name`, item.name)}
               </option>
             ))}
           </Select>
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Исполнитель">
+          <Field label={t('assignee')}>
             <Select value={assigneeId} onChange={(event) => setAssigneeId(event.target.value)}>
               {assignees.map((user) => (
                 <option key={user.id} value={user.id}>
@@ -127,17 +130,17 @@ export function NewTaskModal() {
               ))}
             </Select>
           </Field>
-          <Field label="Приоритет">
+          <Field label={t('priority')}>
             <Select value={priority} onChange={(event) => setPriority(event.target.value as TaskPriority)}>
               {priorities.map((item) => (
                 <option key={item} value={item}>
-                  {priorityLabel[item]}
+                  {priorityText(item, locale)}
                 </option>
               ))}
             </Select>
           </Field>
         </div>
-        <Field label="Срок" hint="Новые задачи начинают со статуса «К выполнению».">
+        <Field label={t('deadline')} hint={t('deadlineHint')}>
           <Input type="date" value={deadline} onChange={(event) => setDeadline(event.target.value)} />
         </Field>
       </form>

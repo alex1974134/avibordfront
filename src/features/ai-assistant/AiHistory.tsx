@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n/useI18n'
 import type { AiTurn } from '../../types'
 import { formatRelative } from '../../utils/format'
 import { cn } from '../../utils/cn'
@@ -11,11 +12,12 @@ export function AiHistory({
   activeId: string | null
   onSelect: (turn: AiTurn) => void
 }) {
+  const { locale, t } = useI18n()
   return (
     <div className="rounded-xl border border-line bg-white p-4 shadow-[0_1px_2px_rgb(22_24_29/0.04)]">
-      <h2 className="text-sm font-semibold text-ink">История</h2>
+      <h2 className="text-sm font-semibold text-ink">{t('aiHistory')}</h2>
       {turns.length === 0 ? (
-        <p className="mt-3 text-sm leading-6 text-muted">Черновики этой сессии появятся здесь.</p>
+        <p className="mt-3 text-sm leading-6 text-muted">{t('aiHistoryEmpty')}</p>
       ) : (
         <ul className="mt-3 flex flex-col gap-1">
           {turns.map((turn) => {
@@ -31,7 +33,7 @@ export function AiHistory({
                   )}
                 >
                   <span className="line-clamp-2 text-sm text-ink">{turn.prompt}</span>
-                  <span className="mt-1 block text-[11px] text-faint">{formatRelative(turn.createdAt)}</span>
+                  <span className="mt-1 block text-[11px] text-faint">{formatRelative(turn.createdAt, Date.now(), locale)}</span>
                 </button>
               </li>
             )

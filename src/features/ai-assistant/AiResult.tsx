@@ -1,4 +1,6 @@
 import { motion } from 'framer-motion'
+import { localized } from '../../i18n/content'
+import { useI18n } from '../../i18n/useI18n'
 import type { AiTurn, Project, User } from '../../types'
 import { Avatar } from '../../components/ui/Avatar'
 import { Button } from '../../components/ui/Button'
@@ -23,6 +25,8 @@ export function AiResult({
   onAdd: () => void
 }) {
   const project = projects.find((item) => item.id === projectId)
+  const { locale, t } = useI18n()
+  const projectName = project ? localized(locale, `project.${project.id}.name`, project.name) : t('projectFallback')
 
   return (
     <div className="mt-4 border-t border-line pt-4">
@@ -60,15 +64,15 @@ export function AiResult({
         })}
       </motion.ul>
       <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-        <Select className="sm:max-w-xs" value={projectId} onChange={(event) => onProject(event.target.value)} aria-label="Проект">
+        <Select className="sm:max-w-xs" value={projectId} onChange={(event) => onProject(event.target.value)} aria-label={t('project')}>
           {projects.map((item) => (
             <option key={item.id} value={item.id}>
-              {item.name}
+              {localized(locale, `project.${item.id}.name`, item.name)}
             </option>
           ))}
         </Select>
         <Button size="sm" onClick={onAdd} disabled={saved || !project}>
-          {saved ? `Добавлено в «${project?.name ?? 'проект'}»` : 'Добавить на доску'}
+          {saved ? t('aiAddedTo', { name: projectName }) : t('aiAddToBoard')}
         </Button>
       </div>
     </div>

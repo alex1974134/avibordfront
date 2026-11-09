@@ -1,11 +1,18 @@
 import { useEffect } from 'react'
 import { MotionConfig } from 'framer-motion'
 import { RouterProvider } from 'react-router-dom'
+import { useLocaleStore } from '../i18n/locale'
 import { startAuthListener, useAuthStore } from '../store/useAuthStore'
 import { useAppStore } from '../store/useAppStore'
 import { router } from './router'
 
 export function App() {
+  const locale = useLocaleStore((state) => state.locale)
+
+  useEffect(() => {
+    document.documentElement.lang = locale
+  }, [locale])
+
   useEffect(() => {
     const stopAuth = startAuthListener()
     const unsubUsers = useAppStore.subscribe((state, prev) => {

@@ -3,7 +3,9 @@ import { Plus, X } from 'lucide-react'
 import { useWorkspaceData } from '../../hooks/useWorkspaceData'
 import { useAppStore } from '../../store/useAppStore'
 import type { TaskStatus } from '../../types'
-import { taskStatusLabel, taskStatuses } from '../../utils/labels'
+import { localized } from '../../i18n/content'
+import { useI18n } from '../../i18n/useI18n'
+import { statusText, taskStatuses } from '../../utils/labels'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { EmptyState } from '../../components/ui/EmptyState'
@@ -18,6 +20,7 @@ export function TasksPage() {
   const openTaskModal = useAppStore((state) => state.openTaskModal)
   const [scope, setScope] = useState<'mine' | 'all'>('mine')
   const [status, setStatus] = useState<'all' | TaskStatus>('all')
+  const { locale, t } = useI18n()
 
   const project = data.allProjects.find((item) => item.id === data.projectFilterId)
   const scoped = (scope === 'mine' ? data.tasks.filter((task) => task.assigneeId === data.currentUser.id) : data.tasks).filter(
@@ -28,29 +31,29 @@ export function TasksPage() {
   return (
     <Page>
       <PageIntro
-        title="Мои задачи"
-        description="Сначала ваша очередь. Переключитесь на всех, когда нужна общая доска."
+        title={t('navTasks')}
+        description={t('tasksIntro')}
         actions={
           <Button size="sm" icon={<Plus className="h-3.5 w-3.5" />} onClick={openTaskModal}>
-            Новая задача
+            {t('newTask')}
           </Button>
         }
       />
       <div className="flex flex-col gap-3">
         <FilterChips
-          label="Исполнитель"
+          label={t('filterAssignee')}
           value={scope}
           onChange={setScope}
           options={[
-            { value: 'mine', label: 'Назначены мне' },
-            { value: 'all', label: 'Все' },
+            { value: 'mine', label: t('assignedToMe') },
+            { value: 'all', label: t('all') },
           ]}
         />
         <FilterChips
-          label="Статус"
+          label={t('filterStatus')}
           value={status}
           onChange={setStatus}
-          options={[{ value: 'all', label: 'Все' }, ...taskStatuses.map((item) => ({ value: item, label: taskStatusLabel[item] }))]}
+          options={[{ value: 'all', label: t('all') }, ...taskStatuses.map((item) => ({ value: item, label: statusText(item, locale) }))]}
         />
         {project ? (
           <button
@@ -58,18 +61,18 @@ export function TasksPage() {
             onClick={() => setProjectFilter(null)}
             className="inline-flex w-fit cursor-pointer items-center gap-1.5 rounded-lg border border-line bg-white px-2.5 py-1.5 text-xs font-medium text-ink hover:bg-zinc-50"
           >
-            {project.name}
+            {localized(locale, `project.${project.id}.name`, project.name)}
             <X className="h-3.5 w-3.5 text-faint" />
           </button>
         ) : null}
       </div>
       {visible.length === 0 ? (
         <EmptyState
-          title="Задач не найдено"
-          description="Снимите фильтр или создайте задачу в этом пространстве."
+          title={t('noTasksFound')}
+          description={t('noTasksFoundHint')}
           action={
             <Button size="sm" variant="secondary" onClick={openTaskModal}>
-              Новая задача
+              {t('newTask')}
             </Button>
           }
         />
@@ -85,7 +88,7 @@ export function TasksPage() {
                   key={task.id}
                   task={task}
                   assignee={assignee}
-                  projectName={taskProject.name}
+                  projectName={localized(locale, `project.${taskProject.id}.name`, taskProject.name)}
                   onStatus={(next) => setTaskStatus(task.id, next)}
                 />
               )

@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Check, ChevronsUpDown } from 'lucide-react'
 import { workspaces } from '../../data/workspaces'
 import { useDismiss } from '../../hooks/useDismiss'
+import { localized } from '../../i18n/content'
+import { useI18n } from '../../i18n/useI18n'
 import { useAppStore } from '../../store/useAppStore'
 import { cn } from '../../utils/cn'
 
@@ -11,6 +13,7 @@ export function WorkspaceSwitcher() {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const current = workspaces.find((item) => item.id === workspaceId) ?? workspaces[0]
+  const { locale, t } = useI18n()
 
   useDismiss(open, ref, () => setOpen(false))
 
@@ -31,14 +34,14 @@ export function WorkspaceSwitcher() {
       >
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-medium text-ink">{current.name}</span>
-          <span className="block text-[11px] text-faint">{current.plan}</span>
+          <span className="block text-[11px] text-faint">{localized(locale, `workspace.${current.id}.plan`, current.plan)}</span>
         </span>
         <ChevronsUpDown className="h-4 w-4 shrink-0 text-faint" />
       </button>
       {open ? (
         <ul
           role="listbox"
-          aria-label="Пространство"
+          aria-label={t('space')}
           className="absolute top-[calc(100%+6px)] z-30 w-full rounded-lg border border-line bg-white p-1 shadow-lg"
         >
           {workspaces.map((workspace) => {
@@ -57,7 +60,7 @@ export function WorkspaceSwitcher() {
                 >
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-medium">{workspace.name}</span>
-                    <span className="block text-[11px] text-faint">{workspace.plan}</span>
+                    <span className="block text-[11px] text-faint">{localized(locale, `workspace.${workspace.id}.plan`, workspace.plan)}</span>
                   </span>
                   {active ? <Check className="h-4 w-4 shrink-0" /> : null}
                 </button>

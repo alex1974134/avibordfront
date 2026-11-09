@@ -1,10 +1,13 @@
 import { useRef, useState } from 'react'
 import { FileText, Upload } from 'lucide-react'
 import { useWorkspaceData } from '../../hooks/useWorkspaceData'
+import { localized, searchBlob } from '../../i18n/content'
+import { useI18n } from '../../i18n/useI18n'
+import { t as translateNow } from '../../i18n/translate'
 import { useAppStore } from '../../store/useAppStore'
 import type { DocumentCategory, KnowledgeDocument } from '../../types'
-import { formatBytes, formatShortDate, plural } from '../../utils/format'
-import { documentCategoryLabel } from '../../utils/labels'
+import { formatBytes, formatShortDate, noun, sizeText } from '../../utils/format'
+import { categoryText } from '../../utils/labels'
 import { cn } from '../../utils/cn'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
@@ -15,11 +18,8 @@ import { Badge } from '../../components/ui/Badge'
 
 const categories: Array<DocumentCategory | 'All'> = ['All', 'Product', 'Engineering', 'Design', 'Research']
 
-function categoryLabel(item: DocumentCategory | 'All'): string {
-  return item === 'All' ? 'Все' : documentCategoryLabel[item]
-}
-
 export function KnowledgeView() {
+  const { locale, t } = useI18n()
   const { documents, members, workspace, currentUser } = useWorkspaceData()
   const addDocuments = useAppStore((state) => state.addDocuments)
   const showToast = useAppStore((state) => state.showToast)
@@ -32,7 +32,7 @@ export function KnowledgeView() {
 
   const visible = documents.filter((document) => {
     const matchesCategory = category === 'All' || document.category === category
-    const matchesQuery = document.name.toLowerCase().includes(query.trim().toLowerCase())
+    const matchesQuery = searchBlob(`doc.${document.id}.name`, document.name).toLowerCase().includes(query.trim().toLowerCase())
     return matchesCategory && matchesQuery
   })
 
@@ -43,22 +43,19 @@ export function KnowledgeView() {
       workspaceId: workspace.id,
       name: file.name,
       category: uploadCategory,
-      size: formatBytes(file.size),
+      size: formatBytes(file.size, locale),
       updatedAt: new Date().toISOString().slice(0, 10),
       ownerId: currentUser.id,
     }))
     addDocuments(next)
-    showToast(
-      next.length === 1
-        ? 'Документ добавлен'
-        : `Добавлено ${next.length} ${plural(next.length, 'документ', 'документа', 'документов')}`,
-    )
+    const word = noun(locale, next.length, ['документ', 'документа', 'документов'], ['document', 'documents'])
+    showToast(next.length === 1 ? translateNow('toastDocAdded') : translateNow('toastDocsAdded', { count: next.length, word }))
   }
 
   return (
     <div className="grid items-start gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
       <Card className="p-2">
-        <p className="px-2 py-1.5 text-[11px] font-medium tracking-wide text-faint uppercase">Категории</p>
+        <p className="px-2 py-1.5 text-[11px] font-medium tracking-wide text-faint uppercase">{t('categories')}</p>
         <div className="flex flex-col gap-0.5">
           {categories.map((item) => {
             const count = item === 'All' ? documents.length : documents.filter((document) => document.category === item).length
@@ -76,7 +73,7 @@ export function KnowledgeView() {
                   active ? 'bg-accent-soft font-medium text-accent' : 'text-muted hover:bg-zinc-50 hover:text-ink',
                 )}
               >
-                <span>{categoryLabel(item)}</span>
+                <span>{item === 'All' ? t('all') : categoryText(item, locale)}</span>
                 <span className="text-xs text-faint">{count}</span>
               </button>
             )
@@ -104,13 +101,13 @@ export function KnowledgeView() {
           <span className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg bg-zinc-50 text-muted">
             <Upload className="h-4 w-4" />
           </span>
-          <p className="mt-3 text-sm font-medium text-ink">Перетащите файлы сюда</p>
-          <p className="mt-1 text-xs text-faint">Они останутся в этой демо-сессии и никуда не загружаются.</p>
+          <p className="mt-3 text-sm font-medium text-ink">{t('dropFiles')}</p>
+          <p className="mt-1 text-xs text-faint">{t('dropHint')}</p>
           <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
             <label className="text-xs text-muted">
-              Сохранить в
+              {t('saveIn')}
               <select
-                aria-label="Категория загрузки"
+                aria-label={t('uploadCategory')}
                 value={uploadCategory}
                 onChange={(event) => setUploadCategory(event.target.value as DocumentCategory)}
                 className="ml-2 h-8 rounded-lg border border-line bg-white px-2 text-sm text-ink"
@@ -119,13 +116,13 @@ export function KnowledgeView() {
                   .filter((item) => item !== 'All')
                   .map((item) => (
                     <option key={item} value={item}>
-                      {categoryLabel(item)}
+                      {categoryText(item, locale)}
                     </option>
                   ))}
               </select>
             </label>
             <Button variant="secondary" size="sm" onClick={() => inputRef.current?.click()}>
-              Выбрать файлы
+              {t('chooseFiles')}
             </Button>
             <input
               ref={inputRef}
@@ -144,17 +141,17 @@ export function KnowledgeView() {
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Поиск документов"
-            aria-label="Поиск документов"
+            placeholder={t('searchDocs')}
+            aria-label={t('searchDocs')}
             className="sm:max-w-xs"
           />
           <p className="text-xs text-faint">
-            {visible.length} {plural(visible.length, 'документ', 'документа', 'документов')}
+            {visible.length} {noun(locale, visible.length, ['документ', 'документа', 'документов'], ['document', 'documents'])}
           </p>
         </div>
 
         {visible.length === 0 ? (
-          <EmptyState title="Документов нет" description="Выберите другую категорию или добавьте файл выше." />
+          <EmptyState title={t('noDocs')} description={t('noDocsHint')} />
         ) : (
           <Card padding={false}>
             <ul className="divide-y divide-line">
@@ -171,12 +168,12 @@ export function KnowledgeView() {
                         <FileText className="h-4 w-4" />
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium text-ink">{document.name}</span>
+                        <span className="block truncate text-sm font-medium text-ink">{localized(locale, `doc.${document.id}.name`, document.name)}</span>
                         <span className="mt-0.5 block text-xs text-faint">
-                          {owner?.name ?? 'Неизвестно'} · {formatShortDate(document.updatedAt)} · {document.size}
+                          {owner?.name ?? t('unknown')} · {formatShortDate(document.updatedAt, locale)} · {sizeText(document.size, locale)}
                         </span>
                       </span>
-                      <Badge>{documentCategoryLabel[document.category]}</Badge>
+                      <Badge>{categoryText(document.category, locale)}</Badge>
                     </button>
                   </li>
                 )
@@ -186,15 +183,16 @@ export function KnowledgeView() {
         )}
       </div>
 
-      <Modal open={preview !== null} title={preview?.name ?? 'Документ'} onClose={() => setPreview(null)}>
+      <Modal
+        open={preview !== null}
+        title={preview ? localized(locale, `doc.${preview.id}.name`, preview.name) : t('document')}
+        onClose={() => setPreview(null)}
+      >
         {preview ? (
           <div className="flex flex-col gap-3 text-sm leading-6 text-muted">
-            <p>
-              «{preview.name}» хранится в этой демо-сессии. Позже его можно будет проиндексировать, чтобы помощник
-              опирался на него при черновиках задач.
-            </p>
+            <p>{t('docPreview', { name: localized(locale, `doc.${preview.id}.name`, preview.name) })}</p>
             <p className="text-xs text-faint">
-              {documentCategoryLabel[preview.category]} · {preview.size} · Обновлён {formatShortDate(preview.updatedAt)}
+              {categoryText(preview.category, locale)} · {sizeText(preview.size, locale)} · {t('updated', { date: formatShortDate(preview.updatedAt, locale) })}
             </p>
           </div>
         ) : null}

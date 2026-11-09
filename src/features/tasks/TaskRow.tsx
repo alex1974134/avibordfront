@@ -1,4 +1,6 @@
 import type { Task, TaskStatus, User } from '../../types'
+import { localized } from '../../i18n/content'
+import { useI18n } from '../../i18n/useI18n'
 import { formatDeadline } from '../../utils/format'
 import { cn } from '../../utils/cn'
 import { Avatar } from '../../components/ui/Avatar'
@@ -16,7 +18,8 @@ export function TaskRow({
   assignee: User
   onStatus: (status: TaskStatus) => void
 }) {
-  const deadline = formatDeadline(task.deadline)
+  const { locale, t } = useI18n()
+  const deadline = formatDeadline(task.deadline, new Date(), locale)
   const overdue = deadline.overdue && task.status !== 'done'
 
   return (
@@ -24,9 +27,9 @@ export function TaskRow({
       <span className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', priorityDot[task.priority])} />
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-3">
-          <p className="text-sm leading-5 font-medium text-ink">{task.title}</p>
+          <p className="text-sm leading-5 font-medium text-ink">{localized(locale, `task.${task.id}.title`, task.title)}</p>
           <p className={cn('shrink-0 text-xs tabular-nums', overdue ? 'font-medium text-rose-600' : 'text-faint')}>
-            {overdue ? `Просрочено · ${deadline.label}` : deadline.label}
+            {overdue ? t('overdue', { date: deadline.label }) : deadline.label}
           </p>
         </div>
         <div className="mt-1.5 flex flex-wrap items-center gap-2">

@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom'
 import type { Project, Task, User } from '../../types'
 import { useAppStore } from '../../store/useAppStore'
-import { plural } from '../../utils/format'
+import { localized } from '../../i18n/content'
+import { useI18n } from '../../i18n/useI18n'
+import { noun } from '../../utils/format'
 import { Card } from '../../components/ui/Card'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { TaskRow } from '../tasks/TaskRow'
@@ -20,27 +22,26 @@ export function MyTasks({
   searchQuery: string
 }) {
   const setTaskStatus = useAppStore((state) => state.setTaskStatus)
+  const { locale, t } = useI18n()
 
   return (
     <Card padding={false}>
       <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
         <div>
-          <h2 className="text-sm font-semibold text-ink">Мои задачи</h2>
+          <h2 className="text-sm font-semibold text-ink">{t('myTasks')}</h2>
           <p className="text-xs text-faint">
-            {total} {plural(total, 'задача', 'задачи', 'задач')} у вас
+            {t('taskCountLine', { count: total, word: noun(locale, total, ['задача', 'задачи', 'задач'], ['task', 'tasks']) })}
           </p>
         </div>
         <Link to="/tasks" className="text-xs font-medium text-muted hover:text-ink">
-          Все
+          {t('all')}
         </Link>
       </div>
       {tasks.length === 0 ? (
         <div className="p-4">
           <EmptyState
-            title="В этом виде задач нет"
-            description={
-              searchQuery ? 'Попробуйте другой запрос или очистите поиск в шапке.' : 'Новые задачи появятся здесь.'
-            }
+            title={t('noTasksView')}
+            description={searchQuery ? t('noTasksSearch') : t('noTasksYet')}
           />
         </div>
       ) : (
@@ -53,7 +54,7 @@ export function MyTasks({
               <TaskRow
                 key={task.id}
                 task={task}
-                projectName={project.name}
+                projectName={localized(locale, `project.${project.id}.name`, project.name)}
                 assignee={assignee}
                 onStatus={(status) => setTaskStatus(task.id, status)}
               />

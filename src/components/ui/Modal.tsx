@@ -2,6 +2,7 @@ import { useEffect, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { X } from 'lucide-react'
+import { useI18n } from '../../i18n/useI18n'
 import { IconButton } from './IconButton'
 
 interface ModalProps {
@@ -15,6 +16,7 @@ interface ModalProps {
 
 export function Modal({ open, title, description, onClose, children, footer }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null)
+  const { t } = useI18n()
 
   useEffect(() => {
     if (!open) return
@@ -41,7 +43,7 @@ export function Modal({ open, title, description, onClose, children, footer }: M
           exit={{ opacity: 0 }}
           transition={{ duration: 0.16 }}
         >
-          <button type="button" aria-label="Закрыть окно" className="absolute inset-0 bg-ink/30" onClick={onClose} />
+          <button type="button" aria-label={t('closeDialog')} className="absolute inset-0 bg-ink/30" onClick={onClose} />
           <motion.div
             ref={dialogRef}
             role="dialog"
@@ -60,7 +62,7 @@ export function Modal({ open, title, description, onClose, children, footer }: M
                 </h2>
                 {description ? <p className="mt-1 text-sm text-muted">{description}</p> : null}
               </div>
-              <IconButton label="Закрыть" onClick={onClose}>
+              <IconButton label={t('close')} onClick={onClose}>
                 <X className="h-4 w-4" />
               </IconButton>
             </div>

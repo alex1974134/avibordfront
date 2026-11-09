@@ -4,12 +4,15 @@ import { ChevronRight, LogOut } from 'lucide-react'
 import { useWorkspaceData } from '../../hooks/useWorkspaceData'
 import { useAppStore } from '../../store/useAppStore'
 import { useAuthStore } from '../../store/useAuthStore'
+import { roleText } from '../../i18n/content'
+import { useI18n } from '../../i18n/useI18n'
 import { cn } from '../../utils/cn'
 import { Avatar } from '../ui/Avatar'
 import { aiNav, mainNav, systemNav, type NavItem } from './navigation'
 import { WorkspaceSwitcher } from './WorkspaceSwitcher'
 
 function NavList({ items }: { items: NavItem[] }) {
+  const { t } = useI18n()
   return (
     <div className="flex flex-col gap-0.5">
       {items.map((item) => {
@@ -27,7 +30,7 @@ function NavList({ items }: { items: NavItem[] }) {
             }
           >
             <Icon className="h-4 w-4 shrink-0" />
-            <span className="truncate">{item.label}</span>
+            <span className="truncate">{t(item.labelKey)}</span>
           </NavLink>
         )
       })}
@@ -41,6 +44,7 @@ export function Sidebar() {
   const location = useLocation()
   const { currentUser } = useWorkspaceData()
   const logout = useAuthStore((state) => state.logout)
+  const { locale, t } = useI18n()
 
   useEffect(() => {
     setSidebarOpen(false)
@@ -51,7 +55,7 @@ export function Sidebar() {
       {open ? (
         <button
           type="button"
-          aria-label="Закрыть меню"
+          aria-label={t('closeMenu')}
           className="fixed inset-0 z-30 bg-ink/30 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
@@ -68,7 +72,7 @@ export function Sidebar() {
           </span>
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold tracking-tight text-ink">AivibeBoard</p>
-            <p className="text-[11px] text-faint">Рабочее пространство</p>
+            <p className="text-[11px] text-faint">{t('workspaceLabel')}</p>
           </div>
         </div>
         <div className="px-3 pt-4">
@@ -97,7 +101,7 @@ export function Sidebar() {
             <Avatar user={currentUser} />
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-medium text-ink">{currentUser.name}</span>
-              <span className="block truncate text-xs text-faint">{currentUser.role}</span>
+              <span className="block truncate text-xs text-faint">{roleText(locale, currentUser.role)}</span>
             </span>
             <ChevronRight className="h-4 w-4 shrink-0 text-faint" aria-hidden="true" />
           </NavLink>
@@ -107,7 +111,7 @@ export function Sidebar() {
             onClick={logout}
           >
             <LogOut className="h-4 w-4 shrink-0" />
-            Выйти
+            {t('logout')}
           </button>
         </div>
       </aside>

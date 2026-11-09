@@ -1,5 +1,7 @@
 import type { Session, User as SupabaseUser } from '@supabase/supabase-js'
 import { create } from 'zustand'
+import { t } from '../i18n/translate'
+import type { MessageKey } from '../i18n/messages'
 import { supabase } from '../lib/supabase'
 import type { User } from '../types'
 import { initialsFromName } from '../utils/initials'
@@ -98,35 +100,35 @@ function redirectTo(): string {
   return `${window.location.origin}/dashboard`
 }
 
-function messageFromError(error: { message: string; code?: string }, fallback: string): AuthFeedback {
+function messageFromError(error: { message: string; code?: string }, fallback: MessageKey): AuthFeedback {
   const code = error.code ?? ''
   const text = error.message.toLowerCase()
   if (code === 'invalid_credentials' || text.includes('invalid login credentials')) {
-    return { message: 'Неверная почта или пароль.' }
+    return { message: t('authBadCredentials') }
   }
   if (code === 'email_not_confirmed' || text.includes('email not confirmed')) {
-    return { message: 'Сначала подтвердите почту по ссылке из письма.' }
+    return { message: t('authConfirmEmail') }
   }
   if (
     code === 'user_already_exists' ||
     text.includes('already registered') ||
     text.includes('already been registered')
   ) {
-    return { message: 'Эта почта уже занята.' }
+    return { message: t('emailTaken') }
   }
   if (code === 'weak_password' || text.includes('password')) {
-    return { message: 'Пароль должен быть не короче 6 символов.' }
+    return { message: t('authWeakPassword') }
   }
   if (code === 'over_request_rate_limit' || text.includes('rate limit')) {
-    return { message: 'Слишком много попыток. Подождите немного и попробуйте снова.' }
+    return { message: t('authRateLimit') }
   }
-  if (code === 'email_address_invalid' || text.includes('email address') && text.includes('invalid')) {
-    return { message: 'Эта почта не принимается. Укажите настоящий адрес.' }
+  if (code === 'email_address_invalid' || (text.includes('email address') && text.includes('invalid'))) {
+    return { message: t('authBadEmail') }
   }
   if (code === 'signup_disabled' || text.includes('signups not allowed')) {
-    return { message: 'Регистрация сейчас отключена.' }
+    return { message: t('authSignupOff') }
   }
-  return { message: fallback }
+  return { message: t(fallback) }
 }
 
 export function startAuthListener(): () => void {
@@ -158,8 +160,8 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       email: email.trim(),
       password,
     })
-    if (error) return messageFromError(error, 'Не удалось войти. Попробуйте ещё раз.')
-    if (!data.session || !data.user) return { message: 'Не удалось войти. Попробуйте ещё раз.' }
+    if (error) return messageFromError(error, 'authLoginFailed')
+    if (!data.session || !data.user) return { message: t('authLoginFailed') }
     applySession(data.session)
     return null
   },
@@ -174,12 +176,12 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         emailRedirectTo: redirectTo(),
       },
     })
-    if (error) return messageFromError(error, 'Не удалось создать аккаунт. Попробуйте ещё раз.')
-    if (data.user && data.user.identities?.length === 0) return { message: 'Эта почта уже занята.' }
+    if (error) return messageFromError(error, 'authSignupFailed')
+    if (data.user && data.user.identities?.length === 0) return { message: t('emailTaken') }
     if (!data.session || !data.user) {
       return {
         confirm: true,
-        message: 'Аккаунт создан. Подтвердите почту по ссылке из письма — после этого откроется главная страница.',
+        message: t('authCheckEmail'),
       }
     }
     applySession(data.session)

@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useDismiss } from '../../hooks/useDismiss'
 import type { TaskStatus } from '../../types'
 import { cn } from '../../utils/cn'
-import { taskStatusLabel, taskStatuses } from '../../utils/labels'
+import { useI18n } from '../../i18n/useI18n'
+import { statusText, taskStatuses } from '../../utils/labels'
 
 const tones: Record<TaskStatus, string> = {
   todo: 'bg-zinc-100 text-zinc-600',
@@ -14,6 +15,7 @@ const tones: Record<TaskStatus, string> = {
 export function StatusMenu({ status, onChange }: { status: TaskStatus; onChange: (status: TaskStatus) => void }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const { locale, t } = useI18n()
   useDismiss(open, ref, () => setOpen(false))
 
   useEffect(() => {
@@ -26,14 +28,14 @@ export function StatusMenu({ status, onChange }: { status: TaskStatus; onChange:
         type="button"
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-label={`Статус: ${taskStatusLabel[status]}. Изменить статус`}
+        aria-label={t('statusLabel', { status: statusText(status, locale) })}
         onClick={() => setOpen((value) => !value)}
         className={cn(
           'cursor-pointer rounded-md px-1.5 py-0.5 text-[11px] font-medium whitespace-nowrap',
           tones[status],
         )}
       >
-        {taskStatusLabel[status]}
+        {statusText(status, locale)}
       </button>
       {open ? (
         <ul
@@ -52,7 +54,7 @@ export function StatusMenu({ status, onChange }: { status: TaskStatus; onChange:
                   item === status ? 'bg-accent-soft font-medium text-accent' : 'text-ink hover:bg-zinc-50',
                 )}
               >
-                {taskStatusLabel[item]}
+                {statusText(item, locale)}
               </button>
             </li>
           ))}

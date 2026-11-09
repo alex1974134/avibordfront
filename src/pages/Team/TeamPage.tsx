@@ -1,5 +1,7 @@
 import { useWorkspaceData } from '../../hooks/useWorkspaceData'
-import { plural } from '../../utils/format'
+import { roleText } from '../../i18n/content'
+import { useI18n } from '../../i18n/useI18n'
+import { noun } from '../../utils/format'
 import { Badge } from '../../components/ui/Badge'
 import { Card } from '../../components/ui/Card'
 import { Page, PageIntro } from '../../components/ui/PageIntro'
@@ -8,12 +10,13 @@ import { InviteButton } from '../../features/team/InviteModal'
 
 export function TeamPage() {
   const { members, allProjects, currentUser } = useWorkspaceData()
+  const { locale, t } = useI18n()
 
   return (
     <Page>
       <PageIntro
-        title="Команда"
-        description="Все, кому можно назначить работу в этом пространстве."
+        title={t('navTeam')}
+        description={t('teamIntro')}
         actions={<InviteButton />}
       />
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -26,14 +29,14 @@ export function TeamPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <p className="truncate text-sm font-medium text-ink">{member.name}</p>
-                    {member.id === currentUser.id ? <Badge tone="accent">Вы</Badge> : null}
+                    {member.id === currentUser.id ? <Badge tone="accent">{t('you')}</Badge> : null}
                   </div>
-                  <p className="truncate text-xs text-muted">{member.role}</p>
+                  <p className="truncate text-xs text-muted">{roleText(locale, member.role)}</p>
                   <p className="mt-2 truncate text-xs text-faint">{member.email}</p>
                 </div>
               </div>
               <p className="mt-4 text-xs text-faint">
-                {projectCount} {plural(projectCount, 'проект', 'проекта', 'проектов')}
+                {projectCount} {noun(locale, projectCount, ['проект', 'проекта', 'проектов'], ['project', 'projects'])}
               </p>
             </Card>
           )

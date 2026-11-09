@@ -21,9 +21,12 @@ import type {
   ToastMessage,
   User,
 } from '../types'
-import { plural, plusDays } from '../utils/format'
+import { t } from '../i18n/translate'
+import { getLocale } from '../i18n/locale'
+import { localized } from '../i18n/content'
+import { noun, plusDays } from '../utils/format'
 import { initialsFromName } from '../utils/initials'
-import { taskStatusLabel } from '../utils/labels'
+import { statusText } from '../utils/labels'
 
 const memberColors = ['#0f766e', '#1d4ed8', '#9a3412', '#6d28d9', '#0369a1', '#9d174d']
 
@@ -97,9 +100,10 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setWorkspace: (workspaceId) => {
     if (get().workspaceId === workspaceId) return
-    const name = workspaces.find((item) => item.id === workspaceId)?.name ?? 'пространство'
+    const workspace = workspaces.find((item) => item.id === workspaceId)
+    const name = workspace ? localized(getLocale(), `workspace.${workspace.id}.name`, workspace.name) : t('spaceFallback')
     set({ workspaceId, projectFilterId: null, searchQuery: '' })
-    get().showToast(`Открыто пространство «${name}»`)
+    get().showToast(t('toastWorkspace', { name }))
   },
   setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
   setSearchQuery: (searchQuery) => set({ searchQuery }),
@@ -137,7 +141,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       ),
       taskModalOpen: false,
     }))
-    get().showToast('Задача создана')
+    get().showToast(t('toastTaskCreated'))
   },
 
   addGeneratedTasks: ({ projectId, tasks: drafts, workspaceId }) => {
@@ -155,15 +159,17 @@ export const useAppStore = create<AppState>((set, get) => ({
       createdAt,
     }))
     const project = get().projects.find((item) => item.id === projectId)
-    const taskWord = plural(created.length, 'задачу', 'задачи', 'задач')
+    const locale = getLocale()
+    const word = noun(locale, created.length, ['задачу', 'задачи', 'задач'], ['task', 'tasks'])
+    const projectName = project ? localized(locale, `project.${project.id}.name`, project.name) : ''
     const activity: Activity = {
       id: uid(),
       workspaceId,
       type: 'task_created',
       userId: get().currentUserId,
       target: project
-        ? `${created.length} ${taskWord} в проекте «${project.name}»`
-        : `${created.length} ${taskWord}`,
+        ? t('generatedInProject', { count: created.length, word, name: projectName })
+        : t('generatedTasks', { count: created.length, word }),
       timestamp: createdAt,
     }
     set((state) => ({
@@ -174,7 +180,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       ),
     }))
     get().showToast(
-      project ? `Добавлено в «${project.name}»: ${created.length}` : `Добавлено задач: ${created.length}`,
+      project
+        ? t('toastAddedToProject', { name: projectName, count: created.length })
+        : t('toastAddedCount', { count: created.length }),
     )
   },
 
@@ -187,14 +195,14 @@ export const useAppStore = create<AppState>((set, get) => ({
       type: status === 'done' ? 'task_completed' : 'status_changed',
       userId: get().currentUserId,
       target: current.title,
-      meta: taskStatusLabel[status],
+      meta: status,
       timestamp: new Date().toISOString(),
     }
     set((state) => ({
       tasks: state.tasks.map((task) => (task.id === id ? { ...task, status } : task)),
       activities: [activity, ...state.activities],
     }))
-    get().showToast(status === 'done' ? 'Задача завершена' : `Статус: ${taskStatusLabel[status]}`)
+    get().showToast(status === 'done' ? t('toastTaskDone') : t('toastStatus', { status: statusText(status) }))
   },
 
   markNotificationRead: (id) => {
@@ -223,7 +231,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setAiDraft: (aiDraft) => set({ aiDraft }),
   setTelegramConnected: (telegramConnected) => {
     set({ telegramConnected })
-    get().showToast(telegramConnected ? 'Telegram подключён' : 'Telegram отключён')
+    get().showToast(telegramConnected ? t('toastTelegramOn') : t('toastTelegramOff'))
   },
   togglePreference: (key) => {
     set((state) => ({
@@ -237,7 +245,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         user.id === id ? { ...user, ...patch, initials: initialsFromName(patch.name) } : user,
       ),
     }))
-    get().showToast('Профиль обновлён')
+    get().showToast(t('toastProfile'))
   },
   inviteMember: ({ name, email, role }) => {
     const workspaceId = get().workspaceId
@@ -250,7 +258,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       color: memberColors[get().users.length % memberColors.length] ?? '#475569',
       workspaceIds: [workspaceId],
     }
-    const workspaceName = workspaces.find((item) => item.id === workspaceId)?.name ?? 'пространство'
+    const invitedWorkspace = workspaces.find((item) => item.id === workspaceId)
+    const workspaceName = invitedWorkspace
+      ? localized(getLocale(), `workspace.${invitedWorkspace.id}.name`, invitedWorkspace.name)
+      : t('spaceFallback')
     const activity: Activity = {
       id: uid(),
       workspaceId,
@@ -264,7 +275,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       users: [...state.users, user],
       activities: [activity, ...state.activities],
     }))
-    get().showToast(`Приглашение отправлено: ${user.name}`)
+    get().showToast(t('toastInvited', { name: user.name }))
   },
   showToast: (message) => {
     window.clearTimeout(toastTimer)
