@@ -23,18 +23,14 @@ import type {
 } from '../types'
 import { t } from '../i18n/translate'
 import { getLocale } from '../i18n/locale'
-import { localized } from '../i18n/content'
-import { noun, plusDays } from '../utils/format'
+import { displayWorkspaceName, localized } from '../i18n/content'
+import { countWord, plusDays } from '../utils/format'
 import { initialsFromName } from '../utils/initials'
+import { colorAt } from '../utils/memberColor'
 import { statusText } from '../utils/labels'
-
-const memberColors = ['#0f766e', '#1d4ed8', '#9a3412', '#6d28d9', '#0369a1', '#9d174d']
+import { addTaskCount, makeActivity, makeTask, uid } from './records'
 
 let toastTimer: number | undefined
-
-function uid(): string {
-  return crypto.randomUUID()
-}
 
 interface AppState {
   currentUserId: string
@@ -100,8 +96,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setWorkspace: (workspaceId) => {
     if (get().workspaceId === workspaceId) return
-    const workspace = workspaces.find((item) => item.id === workspaceId)
-    const name = workspace ? localized(getLocale(), `workspace.${workspace.id}.name`, workspace.name) : t('spaceFallback')
+    const name = displayWorkspaceName(getLocale(), workspaces.find((item) => item.id === workspaceId))
     set({ workspaceId, projectFilterId: null, searchQuery: '' })
     get().showToast(t('toastWorkspace', { name }))
   },
@@ -114,31 +109,17 @@ export const useAppStore = create<AppState>((set, get) => ({
   addTask: (input) => {
     const title = input.title.trim()
     if (!title) return
-    const task: Task = {
-      id: uid(),
+    const task = makeTask({ ...input, title })
+    const activity = makeActivity({
       workspaceId: input.workspaceId,
-      projectId: input.projectId,
-      title,
-      assigneeId: input.assigneeId,
-      priority: input.priority,
-      status: 'todo',
-      deadline: input.deadline,
-      createdAt: new Date().toISOString(),
-    }
-    const activity: Activity = {
-      id: uid(),
-      workspaceId: input.workspaceId,
-      type: 'task_created',
       userId: get().currentUserId,
       target: title,
       timestamp: task.createdAt,
-    }
+    })
     set((state) => ({
       tasks: [task, ...state.tasks],
       activities: [activity, ...state.activities],
-      projects: state.projects.map((project) =>
-        project.id === input.projectId ? { ...project, taskCount: project.taskCount + 1 } : project,
-      ),
+      projects: addTaskCount(state.projects, input.projectId, 1),
       taskModalOpen: false,
     }))
     get().showToast(t('toastTaskCreated'))
@@ -147,37 +128,33 @@ export const useAppStore = create<AppState>((set, get) => ({
   addGeneratedTasks: ({ projectId, tasks: drafts, workspaceId }) => {
     if (drafts.length === 0) return
     const createdAt = new Date().toISOString()
-    const created: Task[] = drafts.map((draft, index) => ({
-      id: uid(),
-      workspaceId,
-      projectId,
-      title: draft.title,
-      assigneeId: draft.assigneeId,
-      priority: draft.priority,
-      status: 'todo',
-      deadline: plusDays(3 + index * 2),
-      createdAt,
-    }))
+    const created = drafts.map((draft, index) =>
+      makeTask({
+        workspaceId,
+        projectId,
+        title: draft.title,
+        assigneeId: draft.assigneeId,
+        priority: draft.priority,
+        deadline: plusDays(3 + index * 2),
+        createdAt,
+      }),
+    )
     const project = get().projects.find((item) => item.id === projectId)
     const locale = getLocale()
-    const word = noun(locale, created.length, ['задачу', 'задачи', 'задач'], ['task', 'tasks'])
+    const word = countWord(locale, created.length, 'taskAcc')
     const projectName = project ? localized(locale, `project.${project.id}.name`, project.name) : ''
-    const activity: Activity = {
-      id: uid(),
+    const activity = makeActivity({
       workspaceId,
-      type: 'task_created',
       userId: get().currentUserId,
       target: project
         ? t('generatedInProject', { count: created.length, word, name: projectName })
         : t('generatedTasks', { count: created.length, word }),
       timestamp: createdAt,
-    }
+    })
     set((state) => ({
       tasks: [...created, ...state.tasks],
       activities: [activity, ...state.activities],
-      projects: state.projects.map((item) =>
-        item.id === projectId ? { ...item, taskCount: item.taskCount + created.length } : item,
-      ),
+      projects: addTaskCount(state.projects, projectId, created.length),
     }))
     get().showToast(
       project
@@ -189,15 +166,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   setTaskStatus: (id, status) => {
     const current = get().tasks.find((task) => task.id === id)
     if (!current || current.status === status) return
-    const activity: Activity = {
-      id: uid(),
+    const activity = makeActivity({
       workspaceId: current.workspaceId,
       type: status === 'done' ? 'task_completed' : 'status_changed',
       userId: get().currentUserId,
       target: current.title,
       meta: status,
       timestamp: new Date().toISOString(),
-    }
+    })
     set((state) => ({
       tasks: state.tasks.map((task) => (task.id === id ? { ...task, status } : task)),
       activities: [activity, ...state.activities],
@@ -255,22 +231,21 @@ export const useAppStore = create<AppState>((set, get) => ({
       email: email.trim(),
       role: role.trim() || 'Участник',
       initials: initialsFromName(name),
-      color: memberColors[get().users.length % memberColors.length] ?? '#475569',
+      color: colorAt(get().users.length),
       workspaceIds: [workspaceId],
     }
-    const invitedWorkspace = workspaces.find((item) => item.id === workspaceId)
-    const workspaceName = invitedWorkspace
-      ? localized(getLocale(), `workspace.${invitedWorkspace.id}.name`, invitedWorkspace.name)
-      : t('spaceFallback')
-    const activity: Activity = {
-      id: uid(),
+    const workspaceName = displayWorkspaceName(
+      getLocale(),
+      workspaces.find((item) => item.id === workspaceId),
+    )
+    const activity = makeActivity({
       workspaceId,
       type: 'member_added',
       userId: get().currentUserId,
       target: workspaceName,
       meta: user.name,
       timestamp: new Date().toISOString(),
-    }
+    })
     set((state) => ({
       users: [...state.users, user],
       activities: [activity, ...state.activities],

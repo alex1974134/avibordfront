@@ -5,7 +5,8 @@ import { useAuthStore } from '../../store/useAuthStore'
 import type { PreferenceKey } from '../../types'
 import { localized, roleText } from '../../i18n/content'
 import { useI18n } from '../../i18n/useI18n'
-import { noun } from '../../utils/format'
+import { isEmail } from '../../utils/email'
+import { countWord } from '../../utils/format'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { Field, Input } from '../../components/ui/Input'
@@ -47,7 +48,7 @@ export function SettingsPage() {
       setError(t('nameRequired'))
       return
     }
-    if (!/^\S+@\S+\.\S+$/.test(nextEmail)) {
+    if (!isEmail(nextEmail)) {
       setError(t('emailInvalid'))
       return
     }
@@ -117,7 +118,7 @@ export function SettingsPage() {
               {t('planLine', {
                 plan: localized(locale, `workspace.${workspace.id}.plan`, workspace.plan),
                 count: members.length,
-                word: noun(locale, members.length, ['участник', 'участника', 'участников'], ['member', 'members']),
+                word: countWord(locale, members.length, 'member'),
               })}
             </p>
             <p className="mt-3 text-xs leading-5 text-muted">{t('switchSpaceHint')}</p>

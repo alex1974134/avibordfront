@@ -1,7 +1,7 @@
 import { useWorkspaceData } from '../../hooks/useWorkspaceData'
 import { roleText } from '../../i18n/content'
 import { useI18n } from '../../i18n/useI18n'
-import { noun } from '../../utils/format'
+import { countWord } from '../../utils/format'
 import { Badge } from '../../components/ui/Badge'
 import { Card } from '../../components/ui/Card'
 import { Page, PageIntro } from '../../components/ui/PageIntro'
@@ -36,7 +36,7 @@ export function TeamPage() {
                 </div>
               </div>
               <p className="mt-4 text-xs text-faint">
-                {projectCount} {noun(locale, projectCount, ['проект', 'проекта', 'проектов'], ['project', 'projects'])}
+                {projectCount} {countWord(locale, projectCount, 'project')}
               </p>
             </Card>
           )

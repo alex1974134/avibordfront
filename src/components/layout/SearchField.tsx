@@ -2,7 +2,8 @@ import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search, X } from 'lucide-react'
 import { useDismiss } from '../../hooks/useDismiss'
-import { localized, searchBlob } from '../../i18n/content'
+import { localized } from '../../i18n/content'
+import { projectSearchText, taskSearchText } from '../../utils/haystack'
 import { useI18n } from '../../i18n/useI18n'
 import { useAppStore } from '../../store/useAppStore'
 import { filterByQuery } from '../../utils/search'
@@ -25,13 +26,12 @@ export function SearchField({ autoFocus = false }: { autoFocus?: boolean }) {
   const projectHits = filterByQuery(
     projects.filter((project) => project.workspaceId === workspaceId),
     needle,
-    (project) =>
-      `${searchBlob(`project.${project.id}.name`, project.name)} ${searchBlob(`project.${project.id}.description`, project.description)}`,
+    projectSearchText,
   ).slice(0, 4)
   const taskHits = filterByQuery(
     tasks.filter((task) => task.workspaceId === workspaceId),
     needle,
-    (task) => searchBlob(`task.${task.id}.title`, task.title),
+    (task) => taskSearchText(task),
   ).slice(0, 6)
   const showPanel = open && needle.length > 0
 

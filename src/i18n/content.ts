@@ -1,4 +1,5 @@
 import type { Locale } from './locale'
+import { translate } from './translate'
 
 interface Pair {
   ru: string
@@ -113,13 +114,14 @@ const inviteRoles: Record<(typeof inviteRoleIds)[number], Pair> = {
   operations: { ru: 'Операции', en: 'Operations' },
 }
 
+export function displayWorkspaceName(locale: Locale, workspace: { id: string; name: string } | undefined): string {
+  if (!workspace) return translate(locale, 'spaceFallback')
+  return localized(locale, `workspace.${workspace.id}.name`, workspace.name)
+}
+
 export function roleText(locale: Locale, role: string): string {
   const invite = inviteRoles[role as (typeof inviteRoleIds)[number]]
   if (invite) return invite[locale]
   const pair = roles.find((item) => item.ru === role || item.en === role)
   return pair ? pair[locale] : role
-}
-
-export function inviteRoleValue(id: (typeof inviteRoleIds)[number]): string {
-  return id
 }

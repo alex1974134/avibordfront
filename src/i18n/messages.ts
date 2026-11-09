@@ -240,11 +240,6 @@ const ru = {
   themeDesign: 'дизайн',
   themeMarketing: 'маркетинг',
   themeIntegration: 'интеграция',
-  member: 'участник',
-  membersFew: 'участника',
-  membersMany: 'участников',
-  memberOneEn: 'member',
-  membersManyEn: 'members',
 } as const
 
 export type MessageKey = keyof typeof ru
@@ -493,10 +488,5 @@ export const messages: Record<'ru' | 'en', { [K in MessageKey]: string }> = {
     themeDesign: 'design',
     themeMarketing: 'marketing',
     themeIntegration: 'integration',
-    member: 'member',
-    membersFew: 'members',
-    membersMany: 'members',
-    memberOneEn: 'member',
-    membersManyEn: 'members',
   },
 }

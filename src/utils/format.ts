@@ -20,9 +20,29 @@ export function formatShortDate(value: string, locale: Locale = getLocale()): st
   return parseDate(value).toLocaleDateString(dateLocale(locale), { month: 'short', day: 'numeric' })
 }
 
-export function noun(locale: Locale, count: number, ru: [string, string, string], en: [string, string]): string {
+export function noun(
+  locale: Locale,
+  count: number,
+  ru: readonly [string, string, string],
+  en: readonly [string, string],
+): string {
   if (locale === 'en') return Math.abs(count) === 1 ? en[0] : en[1]
   return plural(count, ru[0], ru[1], ru[2])
+}
+
+const countForms = {
+  task: { ru: ['задача', 'задачи', 'задач'], en: ['task', 'tasks'] },
+  taskAcc: { ru: ['задачу', 'задачи', 'задач'], en: ['task', 'tasks'] },
+  project: { ru: ['проект', 'проекта', 'проектов'], en: ['project', 'projects'] },
+  member: { ru: ['участник', 'участника', 'участников'], en: ['member', 'members'] },
+  document: { ru: ['документ', 'документа', 'документов'], en: ['document', 'documents'] },
+} as const
+
+export type CountKind = keyof typeof countForms
+
+export function countWord(locale: Locale, count: number, kind: CountKind): string {
+  const form = countForms[kind]
+  return noun(locale, count, form.ru, form.en)
 }
 
 export function plural(count: number, one: string, few: string, many: string): string {

@@ -1,6 +1,5 @@
 import { useEffect, useId, useState, type FormEvent, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Eye, EyeOff } from 'lucide-react'
 import { useI18n } from '../../i18n/useI18n'
 import { returnPath } from '../../utils/returnPath'
 import { LanguageSwitch } from '../../components/layout/LanguageSwitch'
@@ -9,11 +8,8 @@ import { Card } from '../../components/ui/Card'
 import { Field, Input } from '../../components/ui/Input'
 import { useAuthStore } from '../../store/useAuthStore'
 import { cn } from '../../utils/cn'
-
-type Mode = 'login' | 'register'
-type FieldName = 'name' | 'email' | 'password' | 'confirm'
-
-const emailPattern = /^\S+@\S+\.\S+$/
+import { authIssues, type AuthField, type AuthMode } from './authIssues'
+import { PasswordField } from './PasswordField'
 
 function readDraft(state: unknown): { name: string; email: string; from?: string } {
   if (!state || typeof state !== 'object') return { name: '', email: '' }
@@ -25,65 +21,19 @@ function readDraft(state: unknown): { name: string; email: string; from?: string
   }
 }
 
-function PasswordField({
-  id,
-  label,
-  value,
-  autoComplete,
-  error,
-  onChange,
-}: {
-  id: string
-  label: string
-  value: string
-  autoComplete: string
-  error?: string
-  onChange: (value: string) => void
-}) {
-  const [visible, setVisible] = useState(false)
-  const { t } = useI18n()
-
-  return (
-    <div className="flex flex-col gap-1.5 text-sm">
-      <label htmlFor={id} className="font-medium text-ink">
-        {label}
-      </label>
-      <div className="relative">
-        <Input
-          id={id}
-          type={visible ? 'text' : 'password'}
-          autoComplete={autoComplete}
-          value={value}
-          className="pr-10"
-          onChange={(event) => onChange(event.target.value)}
-        />
-        <button
-          type="button"
-          aria-label={visible ? t('authHidePassword') : t('authShowPassword')}
-          className="absolute top-0.5 right-0.5 inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-faint transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
-          onClick={() => setVisible((current) => !current)}
-        >
-          {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-        </button>
-      </div>
-      {error ? <span className="text-xs text-rose-600">{error}</span> : null}
-    </div>
-  )
-}
-
 export function AuthPage() {
   const location = useLocation()
   const navigate = useNavigate()
   const login = useAuthStore((state) => state.login)
   const register = useAuthStore((state) => state.register)
-  const mode: Mode = location.pathname === '/register' ? 'register' : 'login'
+  const mode: AuthMode = location.pathname === '/register' ? 'register' : 'login'
   const draft = readDraft(location.state)
   const formId = useId()
   const [name, setName] = useState(draft.name)
   const [email, setEmail] = useState(draft.email)
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
-  const [errors, setErrors] = useState<Partial<Record<FieldName, string>>>({})
+  const [errors, setErrors] = useState<Partial<Record<AuthField, string>>>({})
   const [notice, setNotice] = useState('')
   const [pending, setPending] = useState(false)
   const { t } = useI18n()
@@ -92,7 +42,7 @@ export function AuthPage() {
     document.title = `${mode === 'register' ? t('authRegister') : t('authLogin')} · AivibeBoard`
   }, [mode, t])
 
-  const switchMode = (next: Mode) => {
+  const switchMode = (next: AuthMode) => {
     if (next === mode) return
     setErrors({})
     setNotice('')
@@ -107,21 +57,15 @@ export function AuthPage() {
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (pending) return
-    const nextErrors: Partial<Record<FieldName, string>> = {}
     const nextEmail = email.trim()
-
-    if (mode === 'register' && !name.trim()) nextErrors.name = t('nameRequired')
-    if (!nextEmail) nextErrors.email = t('authEnterEmail')
-    else if (!emailPattern.test(nextEmail)) nextErrors.email = t('emailInvalid')
-    if (!password) nextErrors.password = t('authEnterPassword')
-    else if (mode === 'register' && password.length < 6) {
-      nextErrors.password = t('authPasswordShort')
-    }
-    if (mode === 'register' && !nextErrors.password && password !== confirm) {
-      nextErrors.confirm = t('authPasswordMismatch')
-    }
-    if (Object.keys(nextErrors).length > 0) {
-      setErrors(nextErrors)
+    const issues = authIssues({ mode, name, email, password, confirm })
+    if (Object.keys(issues).length > 0) {
+      setErrors({
+        name: issues.name ? t(issues.name) : undefined,
+        email: issues.email ? t(issues.email) : undefined,
+        password: issues.password ? t(issues.password) : undefined,
+        confirm: issues.confirm ? t(issues.confirm) : undefined,
+      })
       setNotice('')
       return
     }
@@ -247,7 +191,7 @@ function ModeButton({
       )}
       onClick={onClick}
     >
-    {children}
-  </button>
+      {children}
+    </button>
   )
 }

@@ -2,8 +2,8 @@ import { workspaces } from '../data/workspaces'
 import { useAppStore } from '../store/useAppStore'
 import type { Activity, AppNotification, KnowledgeDocument, Project, Task, User, Workspace } from '../types'
 import { requireUser } from '../utils/lookup'
-import { searchBlob } from '../i18n/content'
 import { filterByQuery } from '../utils/search'
+import { projectNameText, projectSearchText, taskSearchText } from '../utils/haystack'
 import { compareTasks } from '../utils/sortTasks'
 import { buildStats, type DashboardStats } from '../utils/stats'
 
@@ -48,16 +48,10 @@ export function useWorkspaceData(): WorkspaceData {
 
   const allProjects = projects.filter((project) => project.workspaceId === workspaceId)
   const workspaceTasks = tasks.filter((task) => task.workspaceId === workspaceId)
-  const searchedProjects = filterByQuery(
-    allProjects,
-    searchQuery,
-    (project) =>
-      `${searchBlob(`project.${project.id}.name`, project.name)} ${searchBlob(`project.${project.id}.description`, project.description)}`,
-  )
+  const searchedProjects = filterByQuery(allProjects, searchQuery, projectSearchText)
   const searchedTasks = filterByQuery(workspaceTasks, searchQuery, (task) => {
     const project = allProjects.find((item) => item.id === task.projectId)
-    const projectName = project ? searchBlob(`project.${project.id}.name`, project.name) : ''
-    return `${searchBlob(`task.${task.id}.title`, task.title)} ${projectName}`
+    return taskSearchText(task, project ? projectNameText(project) : '')
   }).sort(compareTasks)
 
   return {

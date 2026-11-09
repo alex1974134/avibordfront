@@ -1,42 +1,25 @@
-import { getLocale, type Locale } from '../i18n/locale'
-import { translate, type MessageKey } from '../i18n/translate'
-import type { GeneratedTask, TaskPriority } from '../types'
-import { noun } from './format'
+import type { MessageKey } from '../../i18n/messages'
+import type { TaskPriority } from '../../types'
 
-interface Copy {
+export interface Copy {
   ru: string
   en: string
 }
 
-interface Step {
+export interface DraftStep {
   title: (goal: string) => Copy
   detail: Copy
   priority: TaskPriority
   estimate: Copy
 }
 
-interface Theme {
+export interface DraftTheme {
   label: MessageKey
   test: RegExp
-  steps: Step[]
+  steps: DraftStep[]
 }
 
-export interface DraftPlan {
-  summary: string
-  tasks: GeneratedTask[]
-}
-
-function shorten(prompt: string): string {
-  const clean = prompt.replace(/\s+/g, ' ').trim()
-  if (clean.length <= 84) return clean
-  return `${clean.slice(0, 81)}...`
-}
-
-function pick(copy: Copy, locale: Locale): string {
-  return copy[locale]
-}
-
-const general: Step[] = [
+export const generalSteps: DraftStep[] = [
   {
     title: (goal) => ({ ru: `Уточнить результат для «${goal}»`, en: `Clarify the outcome for “${goal}”` }),
     detail: {
@@ -75,7 +58,7 @@ const general: Step[] = [
   },
 ]
 
-const themes: Theme[] = [
+export const draftThemes: DraftTheme[] = [
   {
     label: 'themeDesign',
     test: /design|ui|layout|screen|page|dashboard|wireframe|дизайн|макет|экран|страниц|обзор|интерфейс/i,
@@ -203,25 +186,3 @@ const themes: Theme[] = [
     ],
   },
 ]
-
-export function draftPlan(prompt: string, assigneeIds: string[], locale: Locale = getLocale()): DraftPlan {
-  const goal = shorten(prompt)
-  const theme = themes.find((item) => item.test.test(prompt))
-  const steps = theme?.steps ?? general
-  const tasks = steps.map((step, index) => ({
-    id: crypto.randomUUID(),
-    title: pick(step.title(goal), locale),
-    detail: pick(step.detail, locale),
-    priority: step.priority,
-    estimate: pick(step.estimate, locale),
-    assigneeId: assigneeIds[index % Math.max(assigneeIds.length, 1)] ?? '',
-  }))
-  const word = noun(locale, tasks.length, ['задачу', 'задачи', 'задач'], ['task', 'tasks'])
-
-  return {
-    summary: theme
-      ? translate(locale, 'aiSummaryTheme', { count: tasks.length, word, theme: translate(locale, theme.label) })
-      : translate(locale, 'aiSummaryNote', { count: tasks.length, word }),
-    tasks,
-  }
-}

@@ -3,7 +3,7 @@ import type { Project, Task, User } from '../../types'
 import { useAppStore } from '../../store/useAppStore'
 import { localized } from '../../i18n/content'
 import { useI18n } from '../../i18n/useI18n'
-import { noun } from '../../utils/format'
+import { countWord } from '../../utils/format'
 import { Card } from '../../components/ui/Card'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { TaskRow } from '../tasks/TaskRow'
@@ -30,7 +30,7 @@ export function MyTasks({
         <div>
           <h2 className="text-sm font-semibold text-ink">{t('myTasks')}</h2>
           <p className="text-xs text-faint">
-            {t('taskCountLine', { count: total, word: noun(locale, total, ['задача', 'задачи', 'задач'], ['task', 'tasks']) })}
+            {t('taskCountLine', { count: total, word: countWord(locale, total, 'task') })}
           </p>
         </div>
         <Link to="/tasks" className="text-xs font-medium text-muted hover:text-ink">

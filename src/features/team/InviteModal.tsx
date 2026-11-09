@@ -4,6 +4,7 @@ import { useWorkspaceData } from '../../hooks/useWorkspaceData'
 import { inviteRoleIds, localized, roleText } from '../../i18n/content'
 import { useI18n } from '../../i18n/useI18n'
 import { useAppStore } from '../../store/useAppStore'
+import { isEmail } from '../../utils/email'
 import { Button } from '../../components/ui/Button'
 import { Field, Input, Select } from '../../components/ui/Input'
 import { Modal } from '../../components/ui/Modal'
@@ -37,7 +38,7 @@ export function InviteModal({ open, onClose }: { open: boolean; onClose: () => v
       setError(t('addName'))
       return
     }
-    if (!/^\S+@\S+\.\S+$/.test(nextEmail)) {
+    if (!isEmail(nextEmail)) {
       setError(t('emailInvalid'))
       return
     }

@@ -1,19 +1,16 @@
 import type { Session, User as SupabaseUser } from '@supabase/supabase-js'
 import { create } from 'zustand'
 import { t } from '../i18n/translate'
-import type { MessageKey } from '../i18n/messages'
 import { supabase } from '../lib/supabase'
 import type { User } from '../types'
+import { colorFromId } from '../utils/memberColor'
 import { initialsFromName } from '../utils/initials'
+import { messageFromError, type AuthFeedback } from './authErrors'
 import { useAppStore } from './useAppStore'
 
-const memberColors = ['#0f766e', '#1d4ed8', '#9a3412', '#6d28d9', '#0369a1', '#9d174d']
 const workspaceIds = ['ws-studio']
 
-export interface AuthFeedback {
-  message: string
-  confirm?: boolean
-}
+export type { AuthFeedback }
 
 interface AuthState {
   sessionUserId: string | null
@@ -32,12 +29,6 @@ interface ProfileSnapshot {
 
 let remoteProfile: ProfileSnapshot | null = null
 let applyingSession = false
-
-function colorFromId(id: string): string {
-  let hash = 0
-  for (const char of id) hash = (hash * 31 + char.charCodeAt(0)) >>> 0
-  return memberColors[hash % memberColors.length] ?? '#475569'
-}
 
 function textMeta(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''
@@ -98,37 +89,6 @@ function applySession(session: Session | null) {
 
 function redirectTo(): string {
   return `${window.location.origin}/dashboard`
-}
-
-function messageFromError(error: { message: string; code?: string }, fallback: MessageKey): AuthFeedback {
-  const code = error.code ?? ''
-  const text = error.message.toLowerCase()
-  if (code === 'invalid_credentials' || text.includes('invalid login credentials')) {
-    return { message: t('authBadCredentials') }
-  }
-  if (code === 'email_not_confirmed' || text.includes('email not confirmed')) {
-    return { message: t('authConfirmEmail') }
-  }
-  if (
-    code === 'user_already_exists' ||
-    text.includes('already registered') ||
-    text.includes('already been registered')
-  ) {
-    return { message: t('emailTaken') }
-  }
-  if (code === 'weak_password' || text.includes('password')) {
-    return { message: t('authWeakPassword') }
-  }
-  if (code === 'over_request_rate_limit' || text.includes('rate limit')) {
-    return { message: t('authRateLimit') }
-  }
-  if (code === 'email_address_invalid' || (text.includes('email address') && text.includes('invalid'))) {
-    return { message: t('authBadEmail') }
-  }
-  if (code === 'signup_disabled' || text.includes('signups not allowed')) {
-    return { message: t('authSignupOff') }
-  }
-  return { message: t(fallback) }
 }
 
 export function startAuthListener(): () => void {
