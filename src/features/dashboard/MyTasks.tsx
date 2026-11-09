@@ -22,6 +22,7 @@ export function MyTasks({
   searchQuery: string
 }) {
   const setTaskStatus = useAppStore((state) => state.setTaskStatus)
+  const setProjectFilter = useAppStore((state) => state.setProjectFilter)
   const { locale, t } = useI18n()
 
   return (
@@ -33,7 +34,11 @@ export function MyTasks({
             {t('taskCountLine', { count: total, word: countWord(locale, total, 'task') })}
           </p>
         </div>
-        <Link to="/tasks" className="text-xs font-medium text-muted hover:text-ink">
+        <Link
+          to="/tasks"
+          onClick={() => setProjectFilter(null)}
+          className="text-xs font-medium text-muted hover:text-ink"
+        >
           {t('all')}
         </Link>
       </div>

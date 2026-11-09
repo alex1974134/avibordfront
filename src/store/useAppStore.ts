@@ -28,6 +28,8 @@ import { countWord, plusDays } from '../utils/format'
 import { initialsFromName } from '../utils/initials'
 import { colorAt } from '../utils/memberColor'
 import { statusText } from '../utils/labels'
+import { createBoard, fetchBoards } from '../lib/boards'
+import { useAuthStore } from './useAuthStore'
 import { addTaskCount, makeActivity, makeTask, uid } from './records'
 
 let toastTimer: number | undefined
@@ -41,6 +43,7 @@ interface AppState {
   taskModalOpen: boolean
   users: User[]
   projects: Project[]
+  remoteProjects: Project[]
   tasks: Task[]
   activities: Activity[]
   notifications: AppNotification[]
@@ -70,6 +73,13 @@ interface AppState {
   togglePreference: (key: PreferenceKey) => void
   updateCurrentUser: (patch: Pick<User, 'name' | 'role' | 'email'>) => void
   inviteMember: (input: { name: string; email: string; role: string }) => void
+  loadRemoteBoards: () => Promise<void>
+  addBoard: (input: { name: string; description: string; memberIds: string[] }) => Promise<boolean>
+  updateBoard: (
+    id: string,
+    input: { name: string; description: string; memberIds: string[] },
+  ) => boolean
+  deleteBoard: (id: string) => void
   showToast: (message: string) => void
   dismissToast: () => void
 }
@@ -83,6 +93,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   taskModalOpen: false,
   users: seedUsers,
   projects: seedProjects,
+  remoteProjects: [],
   tasks: seedTasks,
   activities: seedActivities,
   notifications: seedNotifications,
@@ -98,6 +109,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (get().workspaceId === workspaceId) return
     const name = displayWorkspaceName(getLocale(), workspaces.find((item) => item.id === workspaceId))
     set({ workspaceId, projectFilterId: null, searchQuery: '' })
+    void get().loadRemoteBoards()
     get().showToast(t('toastWorkspace', { name }))
   },
   setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
@@ -222,6 +234,97 @@ export const useAppStore = create<AppState>((set, get) => ({
       ),
     }))
     get().showToast(t('toastProfile'))
+  },
+  loadRemoteBoards: async () => {
+    const sessionUserId = useAuthStore.getState().sessionUserId
+    if (!sessionUserId) {
+      set({ remoteProjects: [] })
+      return
+    }
+    try {
+      const boards = await fetchBoards(get().workspaceId)
+      set({ remoteProjects: boards })
+    } catch {
+      set({ remoteProjects: [] })
+    }
+  },
+  addBoard: async ({ name, description, memberIds }) => {
+    const title = name.trim()
+    const text = description.trim()
+    const people = [...new Set(memberIds)]
+    if (!title || !text || people.length === 0) return false
+    const sessionUserId = useAuthStore.getState().sessionUserId
+    const workspaceId = get().workspaceId
+    const deadline = plusDays(30)
+
+    if (sessionUserId) {
+      try {
+        const project = await createBoard({
+          workspaceId,
+          name: title,
+          description: text,
+          memberIds: people,
+          createdBy: sessionUserId,
+          deadline,
+        })
+        set((state) => ({
+          remoteProjects: [project, ...state.remoteProjects.filter((item) => item.id !== project.id)],
+        }))
+        get().showToast(t('toastBoardCreated', { name: title }))
+        return true
+      } catch {
+        get().showToast(t('boardSaveFailed'))
+        return false
+      }
+    }
+
+    const project: Project = {
+      id: uid(),
+      workspaceId,
+      name: title,
+      description: text,
+      status: 'on_track',
+      progress: 0,
+      taskCount: 0,
+      deadline,
+      memberIds: people,
+    }
+    set((state) => ({ remoteProjects: [project, ...state.remoteProjects] }))
+    get().showToast(t('toastBoardCreated', { name: title }))
+    return true
+  },
+  updateBoard: (id, { name, description, memberIds }) => {
+    const title = name.trim()
+    const text = description.trim()
+    const people = [...new Set(memberIds)]
+    if (!title || !text || people.length === 0) return false
+    set((state) => {
+      const patch = (item: Project): Project =>
+        item.id === id ? { ...item, name: title, description: text, memberIds: people } : item
+      const inRemote = state.remoteProjects.some((item) => item.id === id)
+      return inRemote
+        ? { remoteProjects: state.remoteProjects.map(patch) }
+        : { projects: state.projects.map(patch) }
+    })
+    get().showToast(t('toastBoardUpdated', { name: title }))
+    return true
+  },
+  deleteBoard: (id) => {
+    const state = get()
+    const project =
+      state.remoteProjects.find((item) => item.id === id) ?? state.projects.find((item) => item.id === id)
+    const title = project?.name ?? ''
+    set((current) => {
+      const inRemote = current.remoteProjects.some((item) => item.id === id)
+      return {
+        remoteProjects: inRemote
+          ? current.remoteProjects.filter((item) => item.id !== id)
+          : current.remoteProjects,
+        projects: inRemote ? current.projects : current.projects.filter((item) => item.id !== id),
+        projectFilterId: current.projectFilterId === id ? null : current.projectFilterId,
+      }
+    })
+    if (title) get().showToast(t('toastBoardDeleted', { name: title }))
   },
   inviteMember: ({ name, email, role }) => {
     const workspaceId = get().workspaceId

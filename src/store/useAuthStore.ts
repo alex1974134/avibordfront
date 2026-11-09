@@ -76,12 +76,14 @@ function applySession(session: Session | null) {
     if (!authUser) {
       remoteProfile = null
       useAuthStore.setState({ sessionUserId: null, hydrated: true })
+      void useAppStore.getState().loadRemoteBoards()
       return
     }
     const user = toAppUser(authUser)
     remoteProfile = snapshot(user)
     adoptUser(user)
     useAuthStore.setState({ sessionUserId: user.id, hydrated: true })
+    void useAppStore.getState().loadRemoteBoards()
   } finally {
     applyingSession = false
   }
@@ -150,6 +152,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   logout: () => {
     remoteProfile = null
     set({ sessionUserId: null })
+    void useAppStore.getState().loadRemoteBoards()
     void supabase.auth.signOut()
   },
   syncUser: (user) => {

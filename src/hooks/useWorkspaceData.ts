@@ -28,6 +28,7 @@ export function useWorkspaceData(): WorkspaceData {
   const currentUserId = useAppStore((state) => state.currentUserId)
   const users = useAppStore((state) => state.users)
   const projects = useAppStore((state) => state.projects)
+  const remoteProjects = useAppStore((state) => state.remoteProjects)
   const tasks = useAppStore((state) => state.tasks)
   const activities = useAppStore((state) => state.activities)
   const notifications = useAppStore((state) => state.notifications)
@@ -46,7 +47,7 @@ export function useWorkspaceData(): WorkspaceData {
       return a.name.localeCompare(b.name)
     })
 
-  const allProjects = projects.filter((project) => project.workspaceId === workspaceId)
+  const allProjects = [...remoteProjects, ...projects].filter((project) => project.workspaceId === workspaceId)
   const workspaceTasks = tasks.filter((task) => task.workspaceId === workspaceId)
   const searchedProjects = filterByQuery(allProjects, searchQuery, projectSearchText)
   const searchedTasks = filterByQuery(workspaceTasks, searchQuery, (task) => {

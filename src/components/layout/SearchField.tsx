@@ -12,6 +12,7 @@ export function SearchField({ autoFocus = false }: { autoFocus?: boolean }) {
   const navigate = useNavigate()
   const query = useAppStore((state) => state.searchQuery)
   const setSearchQuery = useAppStore((state) => state.setSearchQuery)
+  const setProjectFilter = useAppStore((state) => state.setProjectFilter)
   const workspaceId = useAppStore((state) => state.workspaceId)
   const projects = useAppStore((state) => state.projects)
   const tasks = useAppStore((state) => state.tasks)
@@ -105,6 +106,7 @@ export function SearchField({ autoFocus = false }: { autoFocus?: boolean }) {
                     key={task.id}
                     type="button"
                     onClick={() => {
+                      setProjectFilter(task.projectId)
                       setSearchQuery(localized(locale, `task.${task.id}.title`, task.title))
                       setOpen(false)
                       navigate('/tasks')

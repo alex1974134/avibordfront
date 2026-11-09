@@ -13,6 +13,8 @@ import { WorkspaceSwitcher } from './WorkspaceSwitcher'
 
 function NavList({ items }: { items: NavItem[] }) {
   const { t } = useI18n()
+  const setProjectFilter = useAppStore((state) => state.setProjectFilter)
+  const setSidebarOpen = useAppStore((state) => state.setSidebarOpen)
   return (
     <div className="flex flex-col gap-0.5">
       {items.map((item) => {
@@ -22,6 +24,12 @@ function NavList({ items }: { items: NavItem[] }) {
             key={item.to}
             to={item.to}
             end={item.end}
+            onClick={() => {
+              if (item.to === '/tasks') {
+                setProjectFilter(null)
+                setSidebarOpen(false)
+              }
+            }}
             className={({ isActive }) =>
               cn(
                 'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors',
