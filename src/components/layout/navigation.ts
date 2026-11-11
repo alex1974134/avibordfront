@@ -23,7 +23,7 @@ export interface NavItem {
 export const mainNav: NavItem[] = [
   { labelKey: 'navOverview', to: '/dashboard', icon: LayoutDashboard, end: true },
   { labelKey: 'navTasks', to: '/tasks', icon: Kanban, end: true },
-  { labelKey: 'navProjects', to: '/projects', icon: FolderKanban, end: true },
+  { labelKey: 'navProjects', to: '/projects', icon: FolderKanban },
   { labelKey: 'navTeam', to: '/team', icon: Users, end: true },
   { labelKey: 'navKnowledge', to: '/knowledge-base', icon: BookOpen, end: true },
 ]

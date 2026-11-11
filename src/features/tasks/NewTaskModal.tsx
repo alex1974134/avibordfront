@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { localized } from '../../i18n/content'
 import { useI18n } from '../../i18n/useI18n'
 import { useAppStore } from '../../store/useAppStore'
@@ -16,12 +17,15 @@ export function NewTaskModal() {
   const workspaceId = useAppStore((state) => state.workspaceId)
   const currentUserId = useAppStore((state) => state.currentUserId)
   const projects = useAppStore((state) => state.projects)
+  const remoteProjects = useAppStore((state) => state.remoteProjects)
+  const projectFilterId = useAppStore((state) => state.projectFilterId)
   const users = useAppStore((state) => state.users)
   const { locale, t } = useI18n()
+  const routeProjectId = /^\/projects\/([^/]+)$/.exec(useLocation().pathname)?.[1]
 
   const workspaceProjects = useMemo(
-    () => projects.filter((project) => project.workspaceId === workspaceId),
-    [projects, workspaceId],
+    () => [...remoteProjects, ...projects].filter((project) => project.workspaceId === workspaceId),
+    [remoteProjects, projects, workspaceId],
   )
   const [title, setTitle] = useState('')
   const [projectId, setProjectId] = useState('')
@@ -32,7 +36,8 @@ export function NewTaskModal() {
 
   useEffect(() => {
     if (!open) return
-    const firstProject = workspaceProjects[0]
+    const preferred = routeProjectId ?? projectFilterId
+    const firstProject = workspaceProjects.find((item) => item.id === preferred) ?? workspaceProjects[0]
     setTitle('')
     setError('')
     setPriority('medium')
@@ -40,7 +45,7 @@ export function NewTaskModal() {
     setProjectId(firstProject?.id ?? '')
     const memberIds = firstProject?.memberIds ?? []
     setAssigneeId(memberIds.includes(currentUserId) ? currentUserId : (memberIds[0] ?? currentUserId))
-  }, [open, currentUserId, workspaceProjects])
+  }, [open, currentUserId, workspaceProjects, routeProjectId, projectFilterId])
 
   const project = workspaceProjects.find((item) => item.id === projectId)
   const assignees = users.filter((user) => project?.memberIds.includes(user.id))

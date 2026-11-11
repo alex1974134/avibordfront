@@ -1,4 +1,4 @@
-import type { Activity, Project, Task, TaskPriority } from '../types'
+import type { Activity, Project, Task, TaskPriority, TaskStatus } from '../types'
 
 export function uid(): string {
   return crypto.randomUUID()
@@ -11,6 +11,7 @@ export function makeTask(input: {
   assigneeId: string
   priority: TaskPriority
   deadline: string
+  status?: TaskStatus
   createdAt?: string
 }): Task {
   return {
@@ -20,7 +21,7 @@ export function makeTask(input: {
     title: input.title,
     assigneeId: input.assigneeId,
     priority: input.priority,
-    status: 'todo',
+    status: input.status ?? 'todo',
     deadline: input.deadline,
     createdAt: input.createdAt ?? new Date().toISOString(),
   }

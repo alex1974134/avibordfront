@@ -122,4 +122,5 @@ export interface NewTaskInput {
   priority: TaskPriority
   deadline: string
   workspaceId: string
+  status?: TaskStatus
 }

@@ -5,7 +5,8 @@ import { returnPath } from '../../utils/returnPath'
 import { LanguageSwitch } from '../../components/layout/LanguageSwitch'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
-import { Field, Input } from '../../components/ui/Input'
+import { Field, Input, Select } from '../../components/ui/Input'
+import { isTeamRole, roleText, teamRoleIds } from '../../i18n/content'
 import { useAuthStore } from '../../store/useAuthStore'
 import { cn } from '../../utils/cn'
 import { authIssues, type AuthField, type AuthMode } from './authIssues'
@@ -30,13 +31,14 @@ export function AuthPage() {
   const draft = readDraft(location.state)
   const formId = useId()
   const [name, setName] = useState(draft.name)
+  const [role, setRole] = useState('')
   const [email, setEmail] = useState(draft.email)
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [errors, setErrors] = useState<Partial<Record<AuthField, string>>>({})
   const [notice, setNotice] = useState('')
   const [pending, setPending] = useState(false)
-  const { t } = useI18n()
+  const { locale, t } = useI18n()
 
   useEffect(() => {
     document.title = `${mode === 'register' ? t('authRegister') : t('authLogin')} · AivibeBoard`
@@ -58,10 +60,11 @@ export function AuthPage() {
     event.preventDefault()
     if (pending) return
     const nextEmail = email.trim()
-    const issues = authIssues({ mode, name, email, password, confirm })
+    const issues = authIssues({ mode, name, role, email, password, confirm })
     if (Object.keys(issues).length > 0) {
       setErrors({
         name: issues.name ? t(issues.name) : undefined,
+        role: issues.role ? t(issues.role) : undefined,
         email: issues.email ? t(issues.email) : undefined,
         password: issues.password ? t(issues.password) : undefined,
         confirm: issues.confirm ? t(issues.confirm) : undefined,
@@ -77,7 +80,12 @@ export function AuthPage() {
       const result =
         mode === 'login'
           ? await login(nextEmail, password)
-          : await register({ name: name.trim(), email: nextEmail, password })
+          : await register({
+              name: name.trim(),
+              email: nextEmail,
+              password,
+              role: isTeamRole(role) ? role : '',
+            })
       if (result?.confirm) {
         setNotice(result.message)
         return
@@ -124,14 +132,30 @@ export function AuthPage() {
           </div>
           <form className="mt-5 flex flex-col gap-4" noValidate onSubmit={submit}>
             {mode === 'register' ? (
-              <Field label={t('name')} error={errors.name}>
-                <Input
-                  id={`${formId}-name`}
-                  autoComplete="name"
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                />
-              </Field>
+              <>
+                <Field label={t('name')} error={errors.name}>
+                  <Input
+                    id={`${formId}-name`}
+                    autoComplete="name"
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                  />
+                </Field>
+                <Field label={t('role')} error={errors.role}>
+                  <Select
+                    id={`${formId}-role`}
+                    value={role}
+                    onChange={(event) => setRole(event.target.value)}
+                  >
+                    <option value="">{t('authRolePlaceholder')}</option>
+                    {teamRoleIds.map((item) => (
+                      <option key={item} value={item}>
+                        {roleText(locale, item)}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              </>
             ) : null}
             <Field label={t('email')} error={errors.email}>
               <Input

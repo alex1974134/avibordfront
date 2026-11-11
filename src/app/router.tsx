@@ -6,6 +6,7 @@ import { TaskGeneratorPage } from '../pages/AI/TaskGeneratorPage'
 import { DashboardPage } from '../pages/Dashboard/DashboardPage'
 import { IntegrationsPage } from '../pages/Integrations/IntegrationsPage'
 import { KnowledgeBasePage } from '../pages/KnowledgeBase/KnowledgeBasePage'
+import { ProjectBoardPage } from '../pages/Projects/ProjectBoardPage'
 import { ProjectsPage } from '../pages/Projects/ProjectsPage'
 import { SettingsPage } from '../pages/Settings/SettingsPage'
 import { TasksPage } from '../pages/Tasks/TasksPage'
@@ -41,6 +42,7 @@ export const router = createBrowserRouter([
       { path: 'dashboard', element: <DashboardPage /> },
       { path: 'tasks', element: <TasksPage /> },
       { path: 'projects', element: <ProjectsPage /> },
+      { path: 'projects/:projectId', element: <ProjectBoardPage /> },
       { path: 'team', element: <TeamPage /> },
       { path: 'knowledge-base', element: <KnowledgeBasePage /> },
       { path: 'ai', element: <AIPage /> },

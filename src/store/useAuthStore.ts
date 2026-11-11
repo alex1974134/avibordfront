@@ -1,5 +1,6 @@
 import type { Session, User as SupabaseUser } from '@supabase/supabase-js'
 import { create } from 'zustand'
+import { asTeamRole } from '../i18n/content'
 import { t } from '../i18n/translate'
 import { supabase } from '../lib/supabase'
 import type { User } from '../types'
@@ -16,7 +17,7 @@ interface AuthState {
   sessionUserId: string | null
   hydrated: boolean
   login: (email: string, password: string) => Promise<AuthFeedback | null>
-  register: (input: { name: string; email: string; password: string }) => Promise<AuthFeedback | null>
+  register: (input: { name: string; email: string; password: string; role: string }) => Promise<AuthFeedback | null>
   logout: () => void
   syncUser: (user: User) => void
 }
@@ -127,14 +128,16 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     applySession(data.session)
     return null
   },
-  register: async ({ name, email, password }) => {
+  register: async ({ name, email, password, role }) => {
     const nextName = name.trim()
     const nextEmail = email.trim()
+    const nextRole = role.trim()
+    if (!nextRole) return { message: t('authRoleRequired') }
     const { data, error } = await supabase.auth.signUp({
       email: nextEmail,
       password,
       options: {
-        data: { name: nextName, role: 'Участник' },
+        data: { name: nextName, role: nextRole },
         emailRedirectTo: redirectTo(),
       },
     })
@@ -156,14 +159,16 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     void supabase.auth.signOut()
   },
   syncUser: (user) => {
-    if (applyingSession || get().sessionUserId !== user.id) return
-    if (remoteProfile && sameProfile(user, remoteProfile)) return
+    const role = asTeamRole(user.role)
+    if (applyingSession || get().sessionUserId !== user.id || !role) return
+    const next = { ...user, role }
+    if (remoteProfile && sameProfile(next, remoteProfile)) return
     const previous = remoteProfile
-    remoteProfile = snapshot(user)
-    const data = { name: user.name, role: user.role }
-    const attributes = previous && user.email !== previous.email ? { email: user.email, data } : { data }
+    remoteProfile = snapshot(next)
+    const data = { name: next.name, role: next.role }
+    const attributes = previous && next.email !== previous.email ? { email: next.email, data } : { data }
     void supabase.auth.updateUser(attributes).then(({ error }) => {
-      if (error && remoteProfile && sameProfile(user, remoteProfile)) remoteProfile = previous
+      if (error && remoteProfile && sameProfile(next, remoteProfile)) remoteProfile = previous
     })
   },
 }))

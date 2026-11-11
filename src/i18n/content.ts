@@ -106,6 +106,22 @@ const roles: Pair[] = [
 
 export const inviteRoleIds = ['product', 'design', 'engineering', 'marketing', 'operations'] as const
 
+export const teamRoleIds = [
+  'frontend',
+  'backend',
+  'fullstack',
+  'mobile',
+  'qa',
+  'devops',
+  'admin',
+  'designer',
+  'analyst',
+  'pm',
+  'lead',
+] as const
+
+export type TeamRoleId = (typeof teamRoleIds)[number]
+
 const inviteRoles: Record<(typeof inviteRoleIds)[number], Pair> = {
   product: { ru: 'Продукт', en: 'Product' },
   design: { ru: 'Дизайн', en: 'Design' },
@@ -114,12 +130,39 @@ const inviteRoles: Record<(typeof inviteRoleIds)[number], Pair> = {
   operations: { ru: 'Операции', en: 'Operations' },
 }
 
+const teamRoles: Record<TeamRoleId, Pair> = {
+  frontend: { ru: 'Frontend-разработчик', en: 'Frontend developer' },
+  backend: { ru: 'Backend-разработчик', en: 'Backend developer' },
+  fullstack: { ru: 'Fullstack-разработчик', en: 'Fullstack developer' },
+  mobile: { ru: 'Mobile-разработчик', en: 'Mobile developer' },
+  qa: { ru: 'QA-инженер', en: 'QA engineer' },
+  devops: { ru: 'DevOps-инженер', en: 'DevOps engineer' },
+  admin: { ru: 'Системный администратор', en: 'System administrator' },
+  designer: { ru: 'Дизайнер', en: 'Designer' },
+  analyst: { ru: 'Аналитик', en: 'Analyst' },
+  pm: { ru: 'Менеджер проектов', en: 'Project manager' },
+  lead: { ru: 'Тимлид', en: 'Team lead' },
+}
+
+export function isTeamRole(value: string): value is TeamRoleId {
+  return (teamRoleIds as readonly string[]).includes(value)
+}
+
+export function asTeamRole(value: string): TeamRoleId | null {
+  const trimmed = value.trim()
+  if (isTeamRole(trimmed)) return trimmed
+  const match = teamRoleIds.find((id) => teamRoles[id].ru === trimmed || teamRoles[id].en === trimmed)
+  return match ?? null
+}
+
 export function displayWorkspaceName(locale: Locale, workspace: { id: string; name: string } | undefined): string {
   if (!workspace) return translate(locale, 'spaceFallback')
   return localized(locale, `workspace.${workspace.id}.name`, workspace.name)
 }
 
 export function roleText(locale: Locale, role: string): string {
+  const teamId = asTeamRole(role)
+  if (teamId) return teamRoles[teamId][locale]
   const invite = inviteRoles[role as (typeof inviteRoleIds)[number]]
   if (invite) return invite[locale]
   const pair = roles.find((item) => item.ru === role || item.en === role)

@@ -16,23 +16,31 @@ import type {
   PreferenceKey,
   Preferences,
   Project,
+  ProjectStatus,
   Task,
+  TaskPriority,
   TaskStatus,
   ToastMessage,
   User,
 } from '../types'
 import { t } from '../i18n/translate'
 import { getLocale } from '../i18n/locale'
-import { displayWorkspaceName, localized } from '../i18n/content'
+import { asTeamRole, displayWorkspaceName, localized } from '../i18n/content'
 import { countWord, plusDays } from '../utils/format'
 import { initialsFromName } from '../utils/initials'
 import { colorAt } from '../utils/memberColor'
 import { statusText } from '../utils/labels'
 import { createBoard, fetchBoards } from '../lib/boards'
+import { createBoardTask, deleteBoardTask, fetchBoardTasks, updateBoardTask } from '../lib/tasks'
 import { useAuthStore } from './useAuthStore'
 import { addTaskCount, makeActivity, makeTask, uid } from './records'
 
 let toastTimer: number | undefined
+
+function isPersistedBoard(remoteProjects: Project[], projectId: string): boolean {
+  if (!useAuthStore.getState().sessionUserId) return false
+  return remoteProjects.some((project) => project.id === projectId)
+}
 
 interface AppState {
   currentUserId: string
@@ -60,9 +68,20 @@ interface AppState {
   setProjectFilter: (id: string | null) => void
   openTaskModal: () => void
   closeTaskModal: () => void
-  addTask: (input: NewTaskInput) => void
-  addGeneratedTasks: (input: { projectId: string; tasks: GeneratedTask[]; workspaceId: string }) => void
-  setTaskStatus: (id: string, status: TaskStatus) => void
+  addTask: (input: NewTaskInput) => Promise<void>
+  addGeneratedTasks: (input: { projectId: string; tasks: GeneratedTask[]; workspaceId: string }) => Promise<void>
+  setTaskStatus: (id: string, status: TaskStatus) => Promise<void>
+  updateTask: (
+    id: string,
+    patch: {
+      title?: string
+      assigneeId?: string
+      priority?: TaskPriority
+      deadline?: string
+      status?: TaskStatus
+    },
+  ) => Promise<void>
+  deleteTask: (id: string) => Promise<void>
   markNotificationRead: (id: string) => void
   markAllNotificationsRead: () => void
   addDocuments: (docs: KnowledgeDocument[]) => void
@@ -77,7 +96,13 @@ interface AppState {
   addBoard: (input: { name: string; description: string; memberIds: string[] }) => Promise<boolean>
   updateBoard: (
     id: string,
-    input: { name: string; description: string; memberIds: string[] },
+    input: {
+      name: string
+      description: string
+      memberIds: string[]
+      status: ProjectStatus
+      deadline: string
+    },
   ) => boolean
   deleteBoard: (id: string) => void
   showToast: (message: string) => void
@@ -118,10 +143,42 @@ export const useAppStore = create<AppState>((set, get) => ({
   openTaskModal: () => set({ taskModalOpen: true }),
   closeTaskModal: () => set({ taskModalOpen: false }),
 
-  addTask: (input) => {
+  addTask: async (input) => {
     const title = input.title.trim()
     if (!title) return
-    const task = makeTask({ ...input, title })
+    const sessionUserId = useAuthStore.getState().sessionUserId
+    if (sessionUserId && isPersistedBoard(get().remoteProjects, input.projectId)) {
+      try {
+        const task = await createBoardTask({
+          boardId: input.projectId,
+          workspaceId: input.workspaceId,
+          title,
+          assigneeId: input.assigneeId,
+          priority: input.priority,
+          status: input.status ?? 'todo',
+          deadline: input.deadline,
+          createdBy: sessionUserId,
+        })
+        const activity = makeActivity({
+          workspaceId: input.workspaceId,
+          userId: get().currentUserId,
+          target: title,
+          timestamp: task.createdAt,
+        })
+        set((state) => ({
+          tasks: [task, ...state.tasks.filter((item) => item.id !== task.id)],
+          activities: [activity, ...state.activities],
+          projects: addTaskCount(state.projects, input.projectId, 1),
+          remoteProjects: addTaskCount(state.remoteProjects, input.projectId, 1),
+          taskModalOpen: false,
+        }))
+        get().showToast(t('toastTaskCreated'))
+      } catch {
+        get().showToast(t('taskSaveFailed'))
+      }
+      return
+    }
+    const task = makeTask({ ...input, title, status: input.status })
     const activity = makeActivity({
       workspaceId: input.workspaceId,
       userId: get().currentUserId,
@@ -132,13 +189,62 @@ export const useAppStore = create<AppState>((set, get) => ({
       tasks: [task, ...state.tasks],
       activities: [activity, ...state.activities],
       projects: addTaskCount(state.projects, input.projectId, 1),
+      remoteProjects: addTaskCount(state.remoteProjects, input.projectId, 1),
       taskModalOpen: false,
     }))
     get().showToast(t('toastTaskCreated'))
   },
 
-  addGeneratedTasks: ({ projectId, tasks: drafts, workspaceId }) => {
+  addGeneratedTasks: async ({ projectId, tasks: drafts, workspaceId }) => {
     if (drafts.length === 0) return
+    const sessionUserId = useAuthStore.getState().sessionUserId
+    if (sessionUserId && isPersistedBoard(get().remoteProjects, projectId)) {
+      try {
+        const created = await Promise.all(
+          drafts.map((draft, index) =>
+            createBoardTask({
+              boardId: projectId,
+              workspaceId,
+              title: draft.title,
+              assigneeId: draft.assigneeId,
+              priority: draft.priority,
+              status: 'todo',
+              deadline: plusDays(3 + index * 2),
+              createdBy: sessionUserId,
+            }),
+          ),
+        )
+        const project =
+          get().remoteProjects.find((item) => item.id === projectId) ??
+          get().projects.find((item) => item.id === projectId)
+        const locale = getLocale()
+        const word = countWord(locale, created.length, 'taskAcc')
+        const projectName = project ? localized(locale, `project.${project.id}.name`, project.name) : ''
+        const activity = makeActivity({
+          workspaceId,
+          userId: get().currentUserId,
+          target: project
+            ? t('generatedInProject', { count: created.length, word, name: projectName })
+            : t('generatedTasks', { count: created.length, word }),
+          timestamp: created[0]?.createdAt ?? new Date().toISOString(),
+        })
+        set((state) => ({
+          tasks: [...created, ...state.tasks.filter((item) => !created.some((task) => task.id === item.id))],
+          activities: [activity, ...state.activities],
+          remoteProjects: addTaskCount(state.remoteProjects, projectId, created.length),
+          projects: addTaskCount(state.projects, projectId, created.length),
+        }))
+        get().showToast(
+          project
+            ? t('toastAddedToProject', { name: projectName, count: created.length })
+            : t('toastAddedCount', { count: created.length }),
+        )
+      } catch {
+        get().showToast(t('taskSaveFailed'))
+        void get().loadRemoteBoards()
+      }
+      return
+    }
     const createdAt = new Date().toISOString()
     const created = drafts.map((draft, index) =>
       makeTask({
@@ -175,7 +281,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     )
   },
 
-  setTaskStatus: (id, status) => {
+  setTaskStatus: async (id, status) => {
     const current = get().tasks.find((task) => task.id === id)
     if (!current || current.status === status) return
     const activity = makeActivity({
@@ -191,6 +297,113 @@ export const useAppStore = create<AppState>((set, get) => ({
       activities: [activity, ...state.activities],
     }))
     get().showToast(status === 'done' ? t('toastTaskDone') : t('toastStatus', { status: statusText(status) }))
+    if (!isPersistedBoard(get().remoteProjects, current.projectId)) return
+    try {
+      await updateBoardTask(id, { status })
+    } catch {
+      set((state) => ({
+        tasks: state.tasks.map((task) => (task.id === id ? { ...task, status: current.status } : task)),
+      }))
+      get().showToast(t('taskSaveFailed'))
+    }
+  },
+
+  updateTask: async (id, patch) => {
+    const current = get().tasks.find((task) => task.id === id)
+    if (!current) return
+    const title = (patch.title ?? current.title).trim()
+    if (!title) return
+    const next: Task = {
+      ...current,
+      title,
+      assigneeId: patch.assigneeId ?? current.assigneeId,
+      priority: patch.priority ?? current.priority,
+      deadline: patch.deadline ?? current.deadline,
+      status: patch.status ?? current.status,
+    }
+    const same =
+      next.title === current.title &&
+      next.assigneeId === current.assigneeId &&
+      next.priority === current.priority &&
+      next.deadline === current.deadline &&
+      next.status === current.status
+    if (same) return
+    const statusChanged = next.status !== current.status
+    const onlyAssignee =
+      next.assigneeId !== current.assigneeId &&
+      next.title === current.title &&
+      next.priority === current.priority &&
+      next.deadline === current.deadline &&
+      !statusChanged
+    const activity = statusChanged
+      ? makeActivity({
+          workspaceId: current.workspaceId,
+          type: next.status === 'done' ? 'task_completed' : 'status_changed',
+          userId: get().currentUserId,
+          target: next.title,
+          meta: next.status,
+          timestamp: new Date().toISOString(),
+        })
+      : null
+    set((state) => ({
+      tasks: state.tasks.map((task) => (task.id === id ? next : task)),
+      activities: activity ? [activity, ...state.activities] : state.activities,
+    }))
+    if (onlyAssignee) {
+      const name = get().users.find((user) => user.id === next.assigneeId)?.name ?? ''
+      get().showToast(t('toastTaskAssigned', { name }))
+    } else if (
+      statusChanged &&
+      next.title === current.title &&
+      next.assigneeId === current.assigneeId &&
+      next.priority === current.priority &&
+      next.deadline === current.deadline
+    ) {
+      get().showToast(next.status === 'done' ? t('toastTaskDone') : t('toastStatus', { status: statusText(next.status) }))
+    } else {
+      get().showToast(t('toastTaskUpdated'))
+    }
+    if (!isPersistedBoard(get().remoteProjects, current.projectId)) return
+    try {
+      await updateBoardTask(id, {
+        title: next.title,
+        assigneeId: next.assigneeId,
+        priority: next.priority,
+        deadline: next.deadline,
+        status: next.status,
+      })
+    } catch {
+      set((state) => ({
+        tasks: state.tasks.map((task) => (task.id === id ? current : task)),
+      }))
+      get().showToast(t('taskSaveFailed'))
+    }
+  },
+
+  deleteTask: async (id) => {
+    const current = get().tasks.find((task) => task.id === id)
+    if (!current) return
+    const persisted = isPersistedBoard(get().remoteProjects, current.projectId)
+    set((state) => ({
+      tasks: state.tasks.filter((task) => task.id !== id),
+      projects: addTaskCount(state.projects, current.projectId, -1),
+      remoteProjects: addTaskCount(state.remoteProjects, current.projectId, -1),
+    }))
+    if (!persisted) {
+      get().showToast(t('toastTaskDeleted'))
+      return
+    }
+    try {
+      await deleteBoardTask(id)
+      get().showToast(t('toastTaskDeleted'))
+    } catch {
+      set((state) => ({
+        tasks: state.tasks.some((task) => task.id === current.id) ? state.tasks : [current, ...state.tasks],
+        projects: addTaskCount(state.projects, current.projectId, 1),
+        remoteProjects: addTaskCount(state.remoteProjects, current.projectId, 1),
+      }))
+      get().showToast(t('taskSaveFailed'))
+    }
   },
 
   markNotificationRead: (id) => {
@@ -227,10 +440,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     }))
   },
   updateCurrentUser: (patch) => {
+    const role = asTeamRole(patch.role)
+    if (!role) return
     const id = get().currentUserId
     set((state) => ({
       users: state.users.map((user) =>
-        user.id === id ? { ...user, ...patch, initials: initialsFromName(patch.name) } : user,
+        user.id === id ? { ...user, ...patch, role, initials: initialsFromName(patch.name) } : user,
       ),
     }))
     get().showToast(t('toastProfile'))
@@ -238,12 +453,35 @@ export const useAppStore = create<AppState>((set, get) => ({
   loadRemoteBoards: async () => {
     const sessionUserId = useAuthStore.getState().sessionUserId
     if (!sessionUserId) {
-      set({ remoteProjects: [] })
+      set((state) => {
+        const remoteIds = new Set(state.remoteProjects.map((project) => project.id))
+        return {
+          remoteProjects: [],
+          tasks: state.tasks.filter((task) => !remoteIds.has(task.projectId)),
+        }
+      })
       return
     }
     try {
       const boards = await fetchBoards(get().workspaceId)
-      set({ remoteProjects: boards })
+      let remoteTasks: Task[]
+      try {
+        remoteTasks = await fetchBoardTasks(boards.map((board) => board.id))
+      } catch {
+        set({ remoteProjects: boards })
+        get().showToast(t('taskSaveFailed'))
+        return
+      }
+      set((state) => {
+        const remoteIds = new Set([
+          ...state.remoteProjects.map((project) => project.id),
+          ...boards.map((board) => board.id),
+        ])
+        return {
+          remoteProjects: boards,
+          tasks: [...remoteTasks, ...state.tasks.filter((task) => !remoteIds.has(task.projectId))],
+        }
+      })
     } catch {
       set({ remoteProjects: [] })
     }
@@ -293,14 +531,16 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().showToast(t('toastBoardCreated', { name: title }))
     return true
   },
-  updateBoard: (id, { name, description, memberIds }) => {
+  updateBoard: (id, { name, description, memberIds, status, deadline }) => {
     const title = name.trim()
     const text = description.trim()
     const people = [...new Set(memberIds)]
-    if (!title || !text || people.length === 0) return false
+    if (!title || !text || people.length === 0 || !deadline) return false
     set((state) => {
       const patch = (item: Project): Project =>
-        item.id === id ? { ...item, name: title, description: text, memberIds: people } : item
+        item.id === id
+          ? { ...item, name: title, description: text, memberIds: people, status, deadline }
+          : item
       const inRemote = state.remoteProjects.some((item) => item.id === id)
       return inRemote
         ? { remoteProjects: state.remoteProjects.map(patch) }

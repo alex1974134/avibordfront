@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
-import type { Project } from '../../types'
+import type { Project, ProjectStatus } from '../../types'
 import { roleText } from '../../i18n/content'
 import { useI18n } from '../../i18n/useI18n'
 import { useWorkspaceData } from '../../hooks/useWorkspaceData'
 import { useAppStore } from '../../store/useAppStore'
+import { projectStatusText, projectStatuses } from '../../utils/labels'
 import { Avatar } from '../../components/ui/Avatar'
 import { Button } from '../../components/ui/Button'
-import { Field, Input, Textarea } from '../../components/ui/Input'
+import { Field, Input, Select, Textarea } from '../../components/ui/Input'
 import { Modal } from '../../components/ui/Modal'
 
 export function EditBoardModal({
@@ -23,18 +24,24 @@ export function EditBoardModal({
   const { locale, t } = useI18n()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
+  const [status, setStatus] = useState<ProjectStatus>('on_track')
+  const [deadline, setDeadline] = useState('')
   const [memberIds, setMemberIds] = useState<string[]>([])
   const [nameError, setNameError] = useState('')
   const [descriptionError, setDescriptionError] = useState('')
+  const [deadlineError, setDeadlineError] = useState('')
   const [membersError, setMembersError] = useState('')
 
   useEffect(() => {
     if (!open || !project) return
     setName(project.name)
     setDescription(project.description)
+    setStatus(project.status)
+    setDeadline(project.deadline)
     setMemberIds([...project.memberIds])
     setNameError('')
     setDescriptionError('')
+    setDeadlineError('')
     setMembersError('')
   }, [open, project])
 
@@ -49,12 +56,20 @@ export function EditBoardModal({
     const nextDescription = description.trim()
     const nextNameError = nextName ? '' : t('boardNameRequired')
     const nextDescriptionError = nextDescription ? '' : t('boardDescriptionRequired')
+    const nextDeadlineError = deadline ? '' : t('boardDeadlineRequired')
     const nextMembersError = memberIds.length > 0 ? '' : t('boardMembersRequired')
     setNameError(nextNameError)
     setDescriptionError(nextDescriptionError)
+    setDeadlineError(nextDeadlineError)
     setMembersError(nextMembersError)
-    if (nextNameError || nextDescriptionError || nextMembersError) return
-    const ok = updateBoard(project.id, { name: nextName, description: nextDescription, memberIds })
+    if (nextNameError || nextDescriptionError || nextDeadlineError || nextMembersError) return
+    const ok = updateBoard(project.id, {
+      name: nextName,
+      description: nextDescription,
+      memberIds,
+      status,
+      deadline,
+    })
     if (!ok) return
     onClose()
   }
@@ -107,6 +122,27 @@ export function EditBoardModal({
             placeholder={t('boardDescriptionPlaceholder')}
           />
         </Field>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={t('filterProjectStatus')}>
+            <Select value={status} onChange={(event) => setStatus(event.target.value as ProjectStatus)}>
+              {projectStatuses.map((item) => (
+                <option key={item} value={item}>
+                  {projectStatusText(item, locale)}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label={t('deadline')} error={deadlineError || undefined}>
+            <Input
+              type="date"
+              value={deadline}
+              onChange={(event) => {
+                setDeadline(event.target.value)
+                setDeadlineError('')
+              }}
+            />
+          </Field>
+        </div>
         <fieldset className="flex flex-col gap-1.5">
           <legend className="text-sm font-medium text-ink">{t('boardAccess')}</legend>
           <div className="max-h-52 overflow-y-auto rounded-lg border border-line">

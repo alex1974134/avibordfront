@@ -6,6 +6,7 @@ import { useAppStore } from '../../store/useAppStore'
 import { Avatar } from '../ui/Avatar'
 import { Button } from '../ui/Button'
 import { IconButton } from '../ui/IconButton'
+import { localized } from '../../i18n/content'
 import { useI18n } from '../../i18n/useI18n'
 import { LanguageSwitch } from './LanguageSwitch'
 import { pageMeta } from './navigation'
@@ -14,14 +15,20 @@ import { SearchField } from './SearchField'
 
 export function Header() {
   const location = useLocation()
-  const { workspace, currentUser } = useWorkspaceData()
+  const { workspace, currentUser, allProjects } = useWorkspaceData()
   const setSidebarOpen = useAppStore((state) => state.setSidebarOpen)
   const openTaskModal = useAppStore((state) => state.openTaskModal)
   const [searchOpen, setSearchOpen] = useState(false)
-  const { t } = useI18n()
+  const { locale, t } = useI18n()
+  const projectId = /^\/projects\/([^/]+)$/.exec(location.pathname)?.[1]
+  const board = projectId ? allProjects.find((item) => item.id === projectId) : undefined
   const meta = pageMeta(location.pathname)
-  const title = meta ? t(meta.titleKey) : 'AivibeBoard'
-  const crumbs = [meta?.ai ? 'AI' : workspace.name, title]
+  const title = board
+    ? localized(locale, `project.${board.id}.name`, board.name)
+    : meta
+      ? t(meta.titleKey)
+      : 'AivibeBoard'
+  const crumbs = board ? [t('projects'), title] : [meta?.ai ? 'AI' : workspace.name, title]
 
   useEffect(() => {
     document.title = `${title} · AivibeBoard`

@@ -3,13 +3,13 @@ import { useWorkspaceData } from '../../hooks/useWorkspaceData'
 import { useAppStore } from '../../store/useAppStore'
 import { useAuthStore } from '../../store/useAuthStore'
 import type { PreferenceKey } from '../../types'
-import { localized, roleText } from '../../i18n/content'
+import { asTeamRole, localized, roleText, teamRoleIds } from '../../i18n/content'
 import { useI18n } from '../../i18n/useI18n'
 import { isEmail } from '../../utils/email'
 import { countWord } from '../../utils/format'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
-import { Field, Input } from '../../components/ui/Input'
+import { Field, Input, Select } from '../../components/ui/Input'
 import { Page, PageIntro } from '../../components/ui/PageIntro'
 import { Switch } from '../../components/ui/Switch'
 
@@ -26,39 +26,39 @@ export function SettingsPage() {
   const preferences = useAppStore((state) => state.preferences)
   const togglePreference = useAppStore((state) => state.togglePreference)
   const logout = useAuthStore((state) => state.logout)
+  const storedRole = asTeamRole(currentUser.role) ?? ''
   const [name, setName] = useState(currentUser.name)
-  const [role, setRole] = useState(currentUser.role)
+  const [role, setRole] = useState(storedRole)
   const [email, setEmail] = useState(currentUser.email)
   const [error, setError] = useState('')
+  const [roleError, setRoleError] = useState('')
   const { locale, t } = useI18n()
-  const roleValue = role === currentUser.role ? roleText(locale, currentUser.role) : role
 
   useEffect(() => {
     setName(currentUser.name)
-    setRole(currentUser.role)
+    setRole(asTeamRole(currentUser.role) ?? '')
     setEmail(currentUser.email)
   }, [currentUser])
 
-  const dirty = name !== currentUser.name || role !== currentUser.role || email !== currentUser.email
+  const dirty = name !== currentUser.name || role !== storedRole || email !== currentUser.email
 
   const save = () => {
     const nextName = name.trim()
     const nextEmail = email.trim()
-    if (!nextName) {
-      setError(t('nameRequired'))
-      return
-    }
-    if (!isEmail(nextEmail)) {
-      setError(t('emailInvalid'))
-      return
-    }
+    const nextRole = asTeamRole(role)
     const taken = users.some((user) => user.id !== currentUser.id && user.email.toLowerCase() === nextEmail.toLowerCase())
-    if (taken) {
-      setError(t('emailTaken'))
-      return
-    }
-    setError('')
-    updateCurrentUser({ name: nextName, role: role.trim() || currentUser.role, email: nextEmail })
+    const nextError = !nextName
+      ? t('nameRequired')
+      : !isEmail(nextEmail)
+        ? t('emailInvalid')
+        : taken
+          ? t('emailTaken')
+          : ''
+    const nextRoleError = nextRole ? '' : t('authRoleRequired')
+    setError(nextError)
+    setRoleError(nextRoleError)
+    if (nextError || !nextRole) return
+    updateCurrentUser({ name: nextName, role: nextRole, email: nextEmail })
   }
 
   return (
@@ -77,8 +77,21 @@ export function SettingsPage() {
             <Field label={t('name')}>
               <Input value={name} onChange={(event) => setName(event.target.value)} />
             </Field>
-            <Field label={t('role')}>
-              <Input value={roleValue} onChange={(event) => setRole(event.target.value)} />
+            <Field label={t('role')} error={roleError}>
+              <Select
+                value={role}
+                onChange={(event) => {
+                  setRole(event.target.value)
+                  setRoleError('')
+                }}
+              >
+                <option value="">{t('authRolePlaceholder')}</option>
+                {teamRoleIds.map((item) => (
+                  <option key={item} value={item}>
+                    {roleText(locale, item)}
+                  </option>
+                ))}
+              </Select>
             </Field>
             <Field label={t('email')} error={error}>
               <Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} />

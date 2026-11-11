@@ -12,9 +12,9 @@ export function SearchField({ autoFocus = false }: { autoFocus?: boolean }) {
   const navigate = useNavigate()
   const query = useAppStore((state) => state.searchQuery)
   const setSearchQuery = useAppStore((state) => state.setSearchQuery)
-  const setProjectFilter = useAppStore((state) => state.setProjectFilter)
   const workspaceId = useAppStore((state) => state.workspaceId)
   const projects = useAppStore((state) => state.projects)
+  const remoteProjects = useAppStore((state) => state.remoteProjects)
   const tasks = useAppStore((state) => state.tasks)
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -25,7 +25,7 @@ export function SearchField({ autoFocus = false }: { autoFocus?: boolean }) {
 
   const needle = query.trim()
   const projectHits = filterByQuery(
-    projects.filter((project) => project.workspaceId === workspaceId),
+    [...remoteProjects, ...projects].filter((project) => project.workspaceId === workspaceId),
     needle,
     projectSearchText,
   ).slice(0, 4)
@@ -84,9 +84,9 @@ export function SearchField({ autoFocus = false }: { autoFocus?: boolean }) {
                   key={project.id}
                   type="button"
                   onClick={() => {
-                    setSearchQuery(localized(locale, `project.${project.id}.name`, project.name))
+                    setSearchQuery('')
                     setOpen(false)
-                    navigate('/projects')
+                    navigate(`/projects/${project.id}`)
                   }}
                   className="flex w-full cursor-pointer flex-col rounded-lg px-2 py-2 text-left hover:bg-zinc-50"
                 >
@@ -106,10 +106,9 @@ export function SearchField({ autoFocus = false }: { autoFocus?: boolean }) {
                     key={task.id}
                     type="button"
                     onClick={() => {
-                      setProjectFilter(task.projectId)
-                      setSearchQuery(localized(locale, `task.${task.id}.title`, task.title))
+                      setSearchQuery('')
                       setOpen(false)
-                      navigate('/tasks')
+                      navigate(`/projects/${task.projectId}`)
                     }}
                     className="flex w-full cursor-pointer flex-col rounded-lg px-2 py-2 text-left hover:bg-zinc-50"
                   >
