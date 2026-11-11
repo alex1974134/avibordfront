@@ -1,5 +1,5 @@
 import { Plus, Sparkles } from 'lucide-react'
-import { AiComposer } from '../../features/ai-assistant/AiComposer'
+import { AiLiveChat } from '../../features/ai-assistant/AiLiveChat'
 import { ActivityFeed } from '../../features/dashboard/ActivityFeed'
 import { MyTasks } from '../../features/dashboard/MyTasks'
 import { ProjectOverview } from '../../features/dashboard/ProjectOverview'
@@ -18,7 +18,7 @@ export function DashboardPage() {
   const { t } = useI18n()
 
   const askAi = () => {
-    const field = document.getElementById('ai-goal')
+    const field = document.getElementById('ai-chat-input')
     field?.scrollIntoView({ behavior: 'smooth', block: 'center' })
     if (field instanceof HTMLTextAreaElement) field.focus()
   }
@@ -50,7 +50,7 @@ export function DashboardPage() {
           searchQuery={data.searchQuery}
         />
         <div className="flex flex-col gap-4">
-          <AiComposer layout="card" />
+          <AiLiveChat />
           <ActivityFeed activities={data.activities.slice(0, 6)} users={data.members} />
         </div>
       </div>

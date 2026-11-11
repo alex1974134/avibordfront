@@ -3,6 +3,7 @@ import { Link, Navigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Pencil, Plus, Trash2 } from 'lucide-react'
 import { DeleteBoardModal } from '../../features/boards/DeleteBoardModal'
 import { EditBoardModal } from '../../features/boards/EditBoardModal'
+import { BoardAiDecomposeChat } from '../../features/board-ai/BoardAiDecomposeChat'
 import { ProjectBoard } from '../../features/projects/ProjectBoard'
 import { useWorkspaceData } from '../../hooks/useWorkspaceData'
 import { localized } from '../../i18n/content'
@@ -17,6 +18,7 @@ export function ProjectBoardPage() {
   const { allProjects, members, currentUser, workspace } = useWorkspaceData()
   const tasks = useAppStore((state) => state.tasks)
   const openTaskModal = useAppStore((state) => state.openTaskModal)
+  const storeUsers = useAppStore((state) => state.users)
   const { locale, t } = useI18n()
   const [scope, setScope] = useState<'mine' | 'all'>('all')
   const [editing, setEditing] = useState(false)
@@ -81,6 +83,12 @@ export function ProjectBoardPage() {
       />
       <EditBoardModal project={project} open={editing} onClose={() => setEditing(false)} />
       <DeleteBoardModal project={project} open={deleting} onClose={() => setDeleting(false)} />
+      <BoardAiDecomposeChat
+        projectId={project.id}
+        workspaceId={workspace.id}
+        memberIds={project.memberIds}
+        users={storeUsers}
+      />
     </Page>
   )
 }

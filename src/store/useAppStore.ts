@@ -37,9 +37,13 @@ import { addTaskCount, makeActivity, makeTask, uid } from './records'
 
 let toastTimer: number | undefined
 
+const UUID_PROJECT =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
 function isPersistedBoard(remoteProjects: Project[], projectId: string): boolean {
   if (!useAuthStore.getState().sessionUserId) return false
-  return remoteProjects.some((project) => project.id === projectId)
+  if (remoteProjects.some((project) => project.id === projectId)) return true
+  return UUID_PROJECT.test(projectId)
 }
 
 interface AppState {
@@ -69,7 +73,12 @@ interface AppState {
   openTaskModal: () => void
   closeTaskModal: () => void
   addTask: (input: NewTaskInput) => Promise<void>
-  addGeneratedTasks: (input: { projectId: string; tasks: GeneratedTask[]; workspaceId: string }) => Promise<void>
+  addGeneratedTasks: (input: {
+    projectId: string
+    tasks: GeneratedTask[]
+    workspaceId: string
+    memberIds?: string[]
+  }) => Promise<boolean>
   setTaskStatus: (id: string, status: TaskStatus) => Promise<void>
   updateTask: (
     id: string,
@@ -195,13 +204,21 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().showToast(t('toastTaskCreated'))
   },
 
-  addGeneratedTasks: async ({ projectId, tasks: drafts, workspaceId }) => {
-    if (drafts.length === 0) return
+  addGeneratedTasks: async ({ projectId, tasks: drafts, workspaceId, memberIds }) => {
+    if (drafts.length === 0) return false
+    const allowedAssignees = memberIds?.length ? new Set(memberIds) : null
+    const normalized = drafts.map((draft, index) => {
+      let assigneeId = draft.assigneeId
+      if (allowedAssignees && (!assigneeId || !allowedAssignees.has(assigneeId))) {
+        assigneeId = memberIds![index % memberIds!.length] ?? memberIds![0] ?? assigneeId
+      }
+      return { ...draft, assigneeId }
+    })
     const sessionUserId = useAuthStore.getState().sessionUserId
     if (sessionUserId && isPersistedBoard(get().remoteProjects, projectId)) {
       try {
         const created = await Promise.all(
-          drafts.map((draft, index) =>
+          normalized.map((draft, index) =>
             createBoardTask({
               boardId: projectId,
               workspaceId,
@@ -239,14 +256,15 @@ export const useAppStore = create<AppState>((set, get) => ({
             ? t('toastAddedToProject', { name: projectName, count: created.length })
             : t('toastAddedCount', { count: created.length }),
         )
+        return true
       } catch {
         get().showToast(t('taskSaveFailed'))
         void get().loadRemoteBoards()
+        return false
       }
-      return
     }
     const createdAt = new Date().toISOString()
-    const created = drafts.map((draft, index) =>
+    const created = normalized.map((draft, index) =>
       makeTask({
         workspaceId,
         projectId,
@@ -279,6 +297,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         ? t('toastAddedToProject', { name: projectName, count: created.length })
         : t('toastAddedCount', { count: created.length }),
     )
+    return true
   },
 
   setTaskStatus: async (id, status) => {

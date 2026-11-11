@@ -1,10 +1,12 @@
 # AivibeBoard
 
-Фронтенд-прототип рабочего пространства с AI. Демо-проекты и их задачи живут в сессии браузера. Вход и регистрация идут через Supabase Auth: при регистрации и в настройках человек выбирает роль IT-команды, она сохраняется в metadata пользователя. Создание досок на странице «Мои доски» и задачи на этих досках пишутся в Supabase. Правка и удаление самих досок пока только в интерфейсе (без записи в БД).
+Фронтенд рабочего пространства с задачами, досками и AI. Вход и регистрация — Supabase Auth (роль IT-команды в metadata). Доски и задачи на сохранённых проектах пишутся в Supabase; демо-проекты из `data/` остаются в сессии браузера.
 
-Без сессии открывается только страница входа. Интерфейс на русском и английском: переключатель RU | EN в шапке и на экране входа. Как устроен код — в `docs/session.md`.
+**AI (облако):** на обзоре — лайв-чат с контекстом; на странице доски — всплывающий помощник, который разбивает цель на задачи и назначает их по ролям участников. Вызовы идут в Edge Function `openrouter` (модель OpenRouter `openai/gpt-6-luna`). **Раздел `/ai`** по-прежнему использует локальный черновик без сети.
 
-Скопируйте `.env.example` в `.env.local` и заполните адрес проекта и publishable key. Файл `.env.local` в git не входит.
+Подробности по экранам, миграциям и настройке секрета OpenRouter — в [`docs/session.md`](docs/session.md).
+
+Скопируйте [`.env.example`](.env.example) в `.env.local` и заполните URL и publishable key Supabase.
 
 ```bash
 npm install
@@ -17,4 +19,4 @@ npm run dev
 npm run build
 ```
 
-Схема в Supabase: `supabase/migrations/20261109170336_create_boards.sql` и `supabase/migrations/20261109182851_create_tasks.sql`. Примените миграции в своём проекте Supabase (CLI `supabase db push` или SQL из файлов в панели).
+Миграции БД: [`supabase/migrations/`](supabase/migrations/). Исходник Edge Function: [`supabase/functions/openrouter/`](supabase/functions/openrouter/). После деплоя функции задайте в проекте секрет `OPENROUTER_API_KEY`.
