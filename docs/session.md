@@ -2,7 +2,7 @@
 
 Дата: 2 ноября 2026. Репозиторий: https://github.com/alex1974134/avibordfront
 
-В этой сессии собран фронтенд-прототип AivibeBoard и код отправлен в отдельный GitHub-репозиторий. 4 ноября 2026 вход и регистрация переведены на Supabase Auth. 9 ноября 2026 интерфейс стал двуязычным: русский и английский. В тот же день код разложен по обязанностям, поведение экранов не менялось. Позднее в тот же день раздел «Мои задачи» (`/tasks`) стал списком **досок** пространства: создание в Supabase, редактирование и удаление доски пока только в UI (Zustand). 11 ноября 2026 задачи сохранённых досок создаются, меняются и удаляются в Supabase, а роль IT-команды выбирается при регистрации и в настройках и пишется в metadata пользователя. В тот же день добавлены Edge Function **openrouter** (OpenRouter, модель gpt-6-luna), лайв-чат на обзоре с контекстом, всплывающий AI на доске проекта для декомпозиции цели в задачи по ролям, 10 тестовых участников в демо-данных.
+В этой сессии собран фронтенд-прототип AivibeBoard и код отправлен в отдельный GitHub-репозиторий. 4 ноября 2026 вход и регистрация переведены на Supabase Auth. 9 ноября 2026 интерфейс стал двуязычным: русский и английский. В тот же день код разложен по обязанностям, поведение экранов не менялось. Позднее в тот же день раздел «Мои задачи» (`/tasks`) стал списком **досок** пространства: создание в Supabase, редактирование и удаление доски пока только в UI (Zustand). 11 ноября 2026 задачи сохранённых досок создаются, меняются и удаляются в Supabase, а роль IT-команды выбирается при регистрации и в настройках и пишется в metadata пользователя. В тот же день добавлены Edge Function **openrouter** (OpenRouter, модель gpt-6-luna), лайв-чат на обзоре с контекстом, всплывающий AI на доске проекта для декомпозиции цели в задачи по ролям, 10 тестовых участников в демо-данных. 18 ноября 2026 в этой заметке дописан контракт функции: запасной ключ из Vault, окно контекста чата и схема JSON при разбиении цели.
 
 ## Продукт
 
@@ -30,22 +30,24 @@ src/
   components/   layout и UI-кит
   pages/        страницы разделов и экран входа
   features/     задачи, доски, обзор, AI, команда, база знаний, Telegram
+  features/board-ai/   всплывающий AI-чат декомпозиции на доске проекта
   data/         демо-данные
   i18n/         язык, словари и перевод демо-контента
   lib/          клиент Supabase, доски и задачи, вызов OpenRouter
-  supabase/     SQL-миграции и исходник Edge Function `openrouter`
-  features/board-ai/   всплывающий AI-чат декомпозиции на доске проекта
   store/        состояние доски, сессия входа, сборка записей и разбор ошибок входа
   hooks/        данные текущего пространства, закрытие по клику снаружи
   types/        Project, Task, User, Activity и остальные модели
   utils/        подписи, даты, поиск, почта, цвета участников, склонения
+supabase/
+  migrations/   SQL-миграции досок и задач
+  functions/openrouter/   Edge Function к OpenRouter
 ```
 
 Черновик AI на `/ai` и `/ai/generator`: `features/ai-assistant/draftCatalog.ts`, `draftPlan.ts`, `useDraftGeneration.ts` — локальная сборка без сети.
 
-Живой чат на обзоре: `features/ai-assistant/AiLiveChat.tsx`, `useAiLiveChat.ts` — OpenRouter с историей в `sessionStorage` (`aivibe-ai-chat:<workspaceId>`).
+Живой чат на обзоре: `features/ai-assistant/AiLiveChat.tsx`, `useAiLiveChat.ts`. История лежит в `sessionStorage` (`aivibe-ai-chat:<workspaceId>`) и сбрасывается при смене пространства или по кнопке очистки. В модель уходят системная подсказка на языке интерфейса и последние 24 реплики; более ранние остаются на экране, но в запрос не попадают.
 
-Доска проекта: `features/board-ai/BoardAiDecomposeChat.tsx` — плавающая кнопка, разбиение цели на задачи по ролям участников доски, сохранение через `addGeneratedTasks`. База знаний разделена на категории, зону загрузки, список и создание файлов. Проверка полей входа — в `pages/Auth/authIssues.ts`, поле пароля — в `PasswordField.tsx`, тексты ошибок Supabase — в `store/authErrors.ts`. Задачи и активность доски собирает `store/records.ts`. Общие куски: `utils/email.ts`, `utils/haystack.ts`, `utils/memberColor.ts`, склонения в `utils/format.ts`, нумерованные шаги в `components/ui/NumberedSteps.tsx`.
+Доска проекта: `features/board-ai/BoardAiDecomposeChat.tsx` — плавающая кнопка, разбиение цели на задачи по ролям участников доски, сохранение через `addGeneratedTasks`. Промпт собирает `buildDecomposePrompt.ts`, ответ разбирает `parseDecomposePlan.ts`. База знаний разделена на категории, зону загрузки, список и создание файлов. Проверка полей входа — в `pages/Auth/authIssues.ts`, поле пароля — в `PasswordField.tsx`, тексты ошибок Supabase — в `store/authErrors.ts`. Задачи и активность доски собирает `store/records.ts`. Общие куски: `utils/email.ts`, `utils/haystack.ts`, `utils/memberColor.ts`, склонения в `utils/format.ts`, нумерованные шаги в `components/ui/NumberedSteps.tsx`.
 
 ## Маршруты
 
@@ -89,9 +91,9 @@ src/
 - Поиск по проектам и задачам текущего пространства. Запрос ищет и русское, и английское название демо-записей.
 - База знаний: категории, поиск, перетаскивание файлов. Файлы остаются только в сессии.
 - Telegram: подключение имитируется, демо-адрес можно скопировать.
-- **Обзор:** лайв-чат с моделью `openai/gpt-6-luna` через Edge Function `openrouter`; контекст диалога в рамках вкладки и пространства.
+- **Обзор:** лайв-чат с моделью `openai/gpt-6-luna` через Edge Function `openrouter`. Контекст — текущее пространство и вкладка; в запрос идут системная подсказка и последние 24 сообщения.
 - **AI (`/ai`, `/ai/generator`):** локальный черновик по тексту (700 мс), без сети; задачи можно добавить на доску выбранного проекта.
-- **Доска проекта (`/projects/:id`):** всплывающий AI — описание глобальной цели, ответ JSON, назначение по `teamRole` участников доски, кнопка «Добавить на доску» (Supabase для UUID-досок).
+- **Доска проекта (`/projects/:id`):** всплывающий AI. Пользователь описывает цель, модель отвечает JSON из 4–10 задач с полем `assigneeRole`. Исполнитель подбирается среди участников доски с этой ролью; если роль не узнана или такого человека нет, задача уходит следующему участнику по кругу. Перед сохранением исполнителя можно сменить вручную. «Добавить на доску» для UUID-доски пишет задачи в Supabase со статусом `todo` и сроком через 3, 5, 7… дней. Без участников доски генерация недоступна.
 - В `data/mockUsers.ts` добавлены 10 тестовых участников (`u-test-01` … `u-test-10`) с разными IT-ролями для демо и назначений.
 
 ## Язык
@@ -130,16 +132,37 @@ src/
 
 ## Supabase: Edge Function openrouter
 
-Исходник: `supabase/functions/openrouter/index.ts`. На проекте `kzpppkhjfgzocnzzfvwu`, JWT включён (`verify_jwt: true`).
+Исходник: `supabase/functions/openrouter/index.ts`. На проекте `kzpppkhjfgzocnzzfvwu`, JWT включён (`verify_jwt: true`). Вызов без сессии Supabase не проходит.
 
-- `POST` с `{ "prompt": "..." }` или `{ "messages": [...] }`, опционально `json: true` для `response_format: json_object`.
+- `POST` с `{ "prompt": "..." }` или непустым `{ "messages": [...] }`. Роли сообщений: `user`, `assistant`, `system`. Опционально `json: true` — тогда в OpenRouter уходит `response_format: { "type": "json_object" }`.
+- Успешный ответ: `{ "text": "...", "model": "openai/gpt-6-luna" }`.
+- Ошибки: 405 не POST, 400 пустое тело или не JSON, 500 если ключа нет, код OpenRouter при отказе модели, 502 если тело ответа не разобралось.
 - Модель: **openai/gpt-6-luna** через [OpenRouter](https://openrouter.ai/openai/gpt-6-luna).
-- Ключ **только** в секрете проекта `OPENROUTER_API_KEY` (Dashboard → Edge Functions → Secrets или `supabase secrets set`). В репозиторий ключ не кладётся.
-- Клиент: `src/lib/openrouter.ts` — `callOpenRouterChat`, `callOpenRouterJson`.
+- Ключ читается из секрета `OPENROUTER_API_KEY` (Dashboard → Edge Functions → Secrets или `supabase secrets set`). Если переменной нет, функция смотрит `vault.decrypted_secrets` с тем же именем через `SUPABASE_DB_URL`. В репозиторий ключ не кладётся.
+- Клиент: `src/lib/openrouter.ts` — `callOpenRouterChat` и `callOpenRouterJson`. Текст ошибки функции показывается в чате, если Supabase вернул JSON с полем `error`.
 
 ```ts
 await supabase.functions.invoke('openrouter', { body: { messages } })
 ```
+
+Схема JSON для декомпозиции на доске:
+
+```json
+{
+  "summary": "краткий план",
+  "tasks": [
+    {
+      "title": "название",
+      "detail": "что сделать",
+      "priority": "low|medium|high|critical",
+      "estimate": "оценка",
+      "assigneeRole": "frontend|backend|fullstack|mobile|qa|devops|admin|designer|analyst|pm|lead"
+    }
+  ]
+}
+```
+
+Незнакомый приоритет становится `medium`. Короткие подписи ролей (`fe`, `be`, `design`, `test`, `ops` и похожие) приводятся к идентификатору IT-роли. Пустой список задач или JSON без `title` у задачи считаются ошибкой разбора, на доску ничего не пишется.
 
 ## Git
 
@@ -160,7 +183,7 @@ VITE_SUPABASE_URL=https://<project>.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=<publishable-key>
 ```
 
-Для AI-чата и декомпозиции на доске нужен задеплоенный `openrouter` и секрет `OPENROUTER_API_KEY` в том же проекте Supabase.
+Для AI-чата и декомпозиции на доске нужен задеплоенный `openrouter` и ключ `OPENROUTER_API_KEY`: секрет функции или одноимённая запись в Vault.
 
 ```bash
 npm install
